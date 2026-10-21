@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grow! A microgame from Wave Garden</title>
+<style>
+@font-face{font-family:"Oswald";src:url("../assets/fonts/oswald.woff2") format("woff2");font-weight:200 700;font-display:swap}
+@font-face{font-family:"Open Sans";src:url("../assets/fonts/open-sans.woff2") format("woff2");font-weight:300 800;font-display:swap}
+:root{
+  --paper:#edf4ea;--accent:#3aa35b;
+  --ink:#24262b;--ink-2:#5e6370;--card:#ffffff;--line:rgba(36,38,43,.14);
+  --red:#e2453c;--orange:#f29b1f;--yellow:#f2c230;--green:#3aa35b;--teal:#18a39a;--blue:#2e6fd8;--purple:#8b57d6;--pink:#dd4d8d;--brown:#8e5b33;
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);
+  font-family:"Open Sans","Helvetica Neue",Arial,sans-serif;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#stage{position:fixed;inset:0}
+.hud{position:fixed;left:0;right:0;top:0;z-index:5;height:48px;display:flex;align-items:center;gap:10px;padding:0 16px;pointer-events:none;transition:opacity .2s var(--ease-out)}
+body.embed .hud{padding-right:68px}
+body.attract .hud{opacity:0}
+.cmd{font-family:"Oswald",sans-serif;font-weight:600;font-size:19px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink)}
+.clock{width:24px;height:24px;flex:none}
+.clock .bg{fill:none;stroke:var(--line);stroke-width:4}
+.clock .arc{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;transform:rotate(-90deg);transform-origin:12px 12px}
+.count{margin-left:auto;font-weight:700;font-size:13px;letter-spacing:.06em;color:var(--ink-2)}
+.center{position:fixed;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;pointer-events:none}
+.center.attract{justify-content:flex-start;padding-top:13vh}
+body.fit #stage{transform-origin:50% 0}
+body.fit.attract:not(.still) #stage{transform:translateY(var(--fit-y,45vh)) scale(var(--fit-s,.5))}
+body.fit .center.attract{padding-top:6vh}
+body.fit .center.attract .title{font-size:clamp(32px,8.5vw,66px)}
+.title{font-family:"Oswald",sans-serif;font-weight:600;font-size:clamp(40px,11vw,84px);line-height:1;letter-spacing:.01em;text-transform:uppercase;color:var(--ink)}
+.title::after{content:"";display:block;width:56%;height:6px;margin:12px auto 0;border-radius:3px;background:var(--accent)}
+.sub{margin-top:14px;font-weight:700;font-size:clamp(12px,2.6vw,14px);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.pop{animation:pop .3s var(--ease-out) both}
+@keyframes pop{from{opacity:0;transform:scale(1.15)}to{opacity:1;transform:none}}
+.result{position:fixed;inset:0;z-index:8;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;
+  background:color-mix(in srgb,var(--paper) 94%,transparent)}
+.result.on{display:flex}
+.result h2{margin:0;font-family:"Oswald",sans-serif;font-weight:600;font-size:clamp(28px,7vw,48px);line-height:1.05;text-transform:uppercase;color:var(--ink)}
+.result h2::after{content:"";display:block;width:48px;height:5px;margin:12px auto 0;border-radius:3px;background:var(--accent)}
+.result.lose h2::after{background:var(--ink-2)}
+.result p{max-width:38ch;margin:14px 0 0;font-size:clamp(14px,3.1vw,16px);line-height:1.5}
+.again{margin-top:20px;min-height:44px;padding:10px 22px;border:0;border-radius:4px;cursor:pointer;background:var(--ink);color:#fff;
+  font-family:"Oswald",sans-serif;font-weight:600;font-size:15px;letter-spacing:.06em;text-transform:uppercase;transition:transform .16s var(--ease-out)}
+.again:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+/* the play surface takes keyboard focus so Tab always has somewhere to land inside the demo */
+.surface:focus{outline:none}
+.surface:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+body.micro .again{display:none}
+body.still .hud,body.still .center,body.still .result{display:none!important}
+@media (prefers-reduced-motion:reduce){.pop{animation:none}}
+@media (prefers-reduced-motion:no-preference){
+  .again:active{transform:scale(.97)}
+  body.fit #stage{transition:transform .5s var(--ease-out)}
+  body.attract .title::after{animation:bar 1.8s ease-in-out infinite}
+  @keyframes bar{50%{transform:scaleX(.55)}}
+}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:pointer}
+</style>
+</head>
+<body class="attract">
+<div id="stage">
+<canvas id="g" class="surface" tabindex="0" role="group" aria-label="Wave garden. Tap the garden to send out waves. Every plant a wave reaches grows. Space also sends a wave."></canvas>
+</div>
+<div class="hud" aria-hidden="true">
+  <svg class="clock" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="9"/><circle class="arc" id="clockArc" cx="12" cy="12" r="9"/></svg>
+  <span class="cmd">Grow!</span><span class="count" id="count"></span>
+</div>
+<div class="center attract" id="center"><div class="title" id="bigTitle">Grow!</div><div class="sub pulse" id="bigSub">Tap to play</div></div>
+<div class="result" id="result" role="status" aria-live="polite"><h2 id="resTitle"></h2><p id="resNote"></p><button class="again" id="again" type="button">Play again</button></div>
+<script>
+/* Shared microgame runtime: attract, command flash, timed play, result. */
+var K=(function(){
+  var q=new URLSearchParams(location.search), b=document.body;
+  var K={MICRO:q.has('micro'),STILL:q.has('still'),TEST:q.has('test'),state:'attract'};
+  K.AUTO=q.has('auto')||K.MICRO;
+  K.reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(q.has('embed'))b.classList.add('embed');
+  var FIT=document.getElementById('center').classList.contains('veil');
+  if(FIT){b.classList.add('fit');document.getElementById('center').classList.remove('veil');}
+  if(K.MICRO)b.classList.add('micro');
+  if(K.STILL)b.classList.add('still');
+  var center=document.getElementById('center'),big=document.getElementById('bigTitle'),sub=document.getElementById('bigSub'),
+      res=document.getElementById('result'),resT=document.getElementById('resTitle'),resN=document.getElementById('resNote'),
+      again=document.getElementById('again'),arc=document.getElementById('clockArc'),count=document.getElementById('count');
+  var CIRC=2*Math.PI*9;arc.style.strokeDasharray=String(CIRC);
+  var game=null,timeLeft=0,duration=1,last=0;
+  function setClock(f){arc.style.strokeDashoffset=String(CIRC*(1-Math.max(0,Math.min(1,f))));}
+  K.setCount=function(t){count.textContent=t;};
+  /* fit: scale the scene into the space under the title block */
+  function fit(){
+    if(!FIT)return;
+    var top=sub.getBoundingClientRect().bottom+16,H=window.innerHeight;
+    if(!top||top>H*0.8)return;
+    var s=Math.max(0.3,Math.min(0.64,(H-top-10)/H));
+    b.style.setProperty('--fit-y',Math.round(top)+'px');b.style.setProperty('--fit-s',s.toFixed(3));
+  }
+  fit();window.addEventListener('resize',function(){if(K.state==='attract')fit();});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(K.state==='attract')fit();});
+  if(FIT)document.addEventListener('pointerdown',function(e){if(K.state==='attract'&&!K.STILL&&!(e.target.closest&&e.target.closest('button')))K.start();});
+  K.timeFraction=function(){return timeLeft/duration;};
+  K.start=function(){
+    if(K.state==='play'||K.state==='cmd')return;
+    res.classList.remove('on');b.classList.remove('attract');center.classList.remove('attract');center.classList.remove('veil');
+    K.state='cmd';duration=game.duration(K.MICRO);timeLeft=duration;setClock(1);
+    if(game.reset)game.reset();
+    center.style.display='flex';big.textContent=game.cmd;sub.textContent=game.go||'';sub.classList.remove('pulse');
+    big.classList.remove('pop');void big.offsetWidth;big.classList.add('pop');
+    setTimeout(function(){if(K.state!=='cmd')return;K.state='play';center.style.display='none';if(game.begin)game.begin();},K.MICRO?550:750);
+  };
+  K.finish=function(win){
+    if(K.state!=='play')return;
+    K.state='done';
+    resT.textContent=win?game.winTitle:game.loseTitle;resN.textContent=win?game.winNote:game.loseNote;
+    res.classList.toggle('lose',!win);
+    setTimeout(function(){res.classList.add('on');if(!K.MICRO)again.focus({preventScroll:true});},win?(game.winDelay||0):0);
+    try{if(window.parent!==window)window.parent.postMessage({source:'tamu-microgame',game:game.id,type:'result',win:win},'*');}catch(e){}
+  };
+  K.go=function(g){
+    game=g;
+    if(g.init)g.init();
+    if(K.STILL){if(g.still)g.still();return;}
+    function loop(ts){
+      var dt=Math.min((ts-(last||ts))/1000,0.05);last=ts;
+      if(K.state==='play'){timeLeft-=dt;setClock(timeLeft/duration);if(timeLeft<=0){if(g.timeout)g.timeout();K.finish(false);}}
+      if(g.frame)g.frame(dt,K.state);
+      requestAnimationFrame(loop);
+    }
+    if(K.AUTO)K.start();
+    requestAnimationFrame(loop);
+  };
+  again.addEventListener('click',function(){K.start();});
+  window.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){try{if(window.parent!==window)window.parent.postMessage({source:'tamu-microgame',type:'escape'},'*');}catch(x){}return;}
+    if(K.state==='attract'&&(e.key==='Enter'||e.key===' ')){e.preventDefault();K.start();}
+  });
+  window.addEventListener('message',function(e){if(e.data&&e.data.source==='tamu-arcade'&&e.data.type==='start')K.start();});
+  return K;
+})();
+</script>
+<script>
+(function(){
+  var cv=document.getElementById('g'),cx=cv.getContext('2d'),W=0,H=0,DPR=1;
+  function resize(){DPR=Math.min(window.devicePixelRatio||1,2);W=cv.clientWidth;H=cv.clientHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cx.setTransform(DPR,0,0,DPR,0,0);layout();}
+  var INK='#24262b',TEAL='#18a39a',STEM='#3aa35b',FLOW=['#f2c230','#dd4d8d','#8b57d6','#f29b1f','#e2453c'];
+  var plants=[],ripples=[],need=5,t=0,autoT=0,keyX=0.5;
+  function layout(){
+    var n=plants.length||need;
+    for(var i=0;i<plants.length;i++){var u=(i+0.5)/n;plants[i].x=W*(0.12+0.76*u);plants[i].y=H*(0.66+0.07*Math.sin(u*Math.PI*2));}
+  }
+  function makePlants(n){plants=[];for(var i=0;i<n;i++)plants.push({x:0,y:0,stage:0,shown:0,col:FLOW[i%FLOW.length]});layout();}
+  window.addEventListener('resize',resize);
+  function wave(x,y){ripples.push({x:x,y:y,r:0,max:Math.hypot(W,H)*0.75,hit:[]});}
+  function scale(){return Math.max(0.7,Math.min(1.25,Math.min(W,H)/360));}
+  function drawPlant(p){
+    var k=scale(),s=p.shown,stem=(s<=1?22*s:s<=2?22+18*(s-1):40+16*(s-2))*k;
+    cx.lineCap='round';
+    cx.fillStyle='#8e5b33';cx.beginPath();cx.ellipse(p.x,p.y+2,9*k,4*k,0,0,Math.PI*2);cx.fill();
+    if(s<0.05){cx.fillStyle='#8e5b33';cx.beginPath();cx.arc(p.x,p.y-3*k,5*k,0,Math.PI*2);cx.fill();return;}
+    cx.strokeStyle=STEM;cx.lineWidth=5*k;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(p.x,p.y-stem);cx.stroke();
+    if(s>0.6){cx.fillStyle=STEM;cx.beginPath();cx.ellipse(p.x+9*k,p.y-stem*0.45,9*k,4.5*k,-0.6,0,Math.PI*2);cx.fill();}
+    if(s>1.6){cx.beginPath();cx.ellipse(p.x-9*k,p.y-stem*0.62,9*k,4.5*k,0.6,0,Math.PI*2);cx.fill();}
+    if(s>2.5){var fr=Math.min(1,(s-2.5)/0.5)*12*k;cx.fillStyle=p.col;cx.strokeStyle=INK;cx.lineWidth=3;
+      cx.beginPath();cx.arc(p.x,p.y-stem,fr,0,Math.PI*2);cx.fill();cx.stroke();
+      cx.fillStyle='#fff';cx.beginPath();cx.arc(p.x,p.y-stem,fr*0.38,0,Math.PI*2);cx.fill();}
+  }
+  function draw(dt){
+    cx.clearRect(0,0,W,H);
+    if(plants.length>1){cx.strokeStyle='rgba(24,163,154,.28)';cx.lineWidth=10*scale();cx.lineCap='round';cx.lineJoin='round';
+      cx.beginPath();cx.moveTo(plants[0].x-W*0.06,plants[0].y+14);
+      for(var i=0;i<plants.length;i++)cx.lineTo(plants[i].x,plants[i].y+14);
+      cx.lineTo(plants[plants.length-1].x+W*0.06,plants[plants.length-1].y+14);cx.stroke();}
+    for(var j=ripples.length-1;j>=0;j--){var r=ripples[j];
+      var a=Math.max(0,1-r.r/r.max);cx.strokeStyle='rgba(24,163,154,'+(a*0.75)+')';cx.lineWidth=4;
+      cx.beginPath();cx.arc(r.x,r.y,r.r,0,Math.PI*2);cx.stroke();
+      if(r.r>14){cx.strokeStyle='rgba(24,163,154,'+(a*0.35)+')';cx.beginPath();cx.arc(r.x,r.y,r.r-14,0,Math.PI*2);cx.stroke();}}
+    plants.forEach(drawPlant);
+  }
+  function step(dt,live){
+    for(var j=ripples.length-1;j>=0;j--){var r=ripples[j];r.r+=dt*Math.max(260,Math.max(W,H)*0.6);
+      plants.forEach(function(p,i){if(r.hit.indexOf(i)>=0)return;var d=Math.hypot(p.x-r.x,p.y-r.y);if(r.r>=d){r.hit.push(i);if(p.stage<3)p.stage++;}});
+      if(r.r>r.max)ripples.splice(j,1);}
+    plants.forEach(function(p){p.shown+=(p.stage-p.shown)*Math.min(1,dt*(K.reduce?60:9));});
+    if(live){var b=plants.filter(function(p){return p.stage>=3;}).length;K.setCount(b+'/'+plants.length);if(b>=plants.length)K.finish(true);}
+  }
+  cv.addEventListener('pointerdown',function(e){
+    if(K.state==='attract'){K.start();return;}
+    if(K.state!=='play')return;
+    var r=cv.getBoundingClientRect();wave(e.clientX-r.left,e.clientY-r.top);
+  });
+  window.addEventListener('keydown',function(e){
+    if(K.state!=='play')return;
+    if(e.key===' '||e.key==='Enter'){e.preventDefault();keyX=(keyX+0.37)%1;wave(W*(0.15+0.7*keyX),H*0.8);}
+  });
+  K.go({
+    id:'grow',cmd:'Grow!',go:'Send out waves',winDelay:600,
+    duration:function(m){need=m?3:5;return m?6:12;},
+    winTitle:'In bloom',winNote:'Wave Garden is an experimental prototype exploring growth, sound, and motion as interactive systems.',
+    loseTitle:'Time!',loseNote:'Tap the garden to send out waves. Every plant a wave reaches grows.',
+    init:function(){makePlants(need);resize();},
+    reset:function(){ripples=[];makePlants(need);K.setCount('0/'+need);},
+    frame:function(dt,s){
+      t+=dt;
+      if(s==='attract'&&!K.reduce){autoT-=dt;if(autoT<=0){autoT=1.6;wave(W*(0.2+0.6*Math.random()),H*(0.72+0.12*Math.random()));}
+        plants.forEach(function(p){if(p.stage>=3&&Math.random()<dt*0.12)p.stage=0;});}
+      step(dt,s==='play');draw(dt);
+    },
+    still:function(){makePlants(5);resize();[3,2,3,1,2].forEach(function(s,i){plants[i].stage=s;plants[i].shown=s;});
+      ripples=[{x:W*0.42,y:H*0.8,r:Math.min(W,H)*0.32,max:Math.hypot(W,H)*0.75,hit:[]},{x:W*0.42,y:H*0.8,r:Math.min(W,H)*0.12,max:Math.hypot(W,H)*0.75,hit:[]}];draw(0);}
+  });
+  if(K.TEST)window.__G={get state(){return K.state;},plants:function(){var r=cv.getBoundingClientRect();return plants.map(function(p){return {x:r.left+p.x,y:r.top+p.y,stage:p.stage};});}};
+})();
+</script>
+</body>
+</html>

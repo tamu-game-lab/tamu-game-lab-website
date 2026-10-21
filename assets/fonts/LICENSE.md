@@ -4,7 +4,6 @@ All fonts in this folder are licensed under the SIL Open Font License 1.1 and ar
 
 - oswald.woff2: Oswald (variable, latin). Copyright 2016 The Oswald Project Authors.
 - open-sans.woff2, open-sans-italic.woff2: Open Sans (variable, latin). Copyright 2020 The Open Sans Project Authors.
-- silkscreen.woff2: Silkscreen (latin, 400). Copyright 2001 The Silkscreen Project Authors.
 
 Full license text:
 

@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step in! A microgame from Creative Care</title>
+<style>
+@font-face{font-family:"Oswald";src:url("../assets/fonts/oswald.woff2") format("woff2");font-weight:200 700;font-display:swap}
+@font-face{font-family:"Open Sans";src:url("../assets/fonts/open-sans.woff2") format("woff2");font-weight:300 800;font-display:swap}
+:root{
+  --paper:#f6f0e8;--accent:#e8833a;
+  --ink:#24262b;--ink-2:#5e6370;--card:#ffffff;--line:rgba(36,38,43,.14);
+  --red:#e2453c;--orange:#f29b1f;--yellow:#f2c230;--green:#3aa35b;--teal:#18a39a;--blue:#2e6fd8;--purple:#8b57d6;--pink:#dd4d8d;--brown:#8e5b33;
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);
+  font-family:"Open Sans","Helvetica Neue",Arial,sans-serif;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#stage{position:fixed;inset:0}
+.hud{position:fixed;left:0;right:0;top:0;z-index:5;height:48px;display:flex;align-items:center;gap:10px;padding:0 16px;pointer-events:none;transition:opacity .2s var(--ease-out)}
+body.embed .hud{padding-right:68px}
+body.attract .hud{opacity:0}
+.cmd{font-family:"Oswald",sans-serif;font-weight:600;font-size:19px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink)}
+.clock{width:24px;height:24px;flex:none}
+.clock .bg{fill:none;stroke:var(--line);stroke-width:4}
+.clock .arc{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;transform:rotate(-90deg);transform-origin:12px 12px}
+.count{margin-left:auto;font-weight:700;font-size:13px;letter-spacing:.06em;color:var(--ink-2)}
+.center{position:fixed;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;pointer-events:none}
+.center.attract{justify-content:flex-start;padding-top:13vh}
+body.fit #stage{transform-origin:50% 0}
+body.fit.attract:not(.still) #stage{transform:translateY(var(--fit-y,45vh)) scale(var(--fit-s,.5))}
+body.fit .center.attract{padding-top:6vh}
+body.fit .center.attract .title{font-size:clamp(32px,8.5vw,66px)}
+.title{font-family:"Oswald",sans-serif;font-weight:600;font-size:clamp(40px,11vw,84px);line-height:1;letter-spacing:.01em;text-transform:uppercase;color:var(--ink)}
+.title::after{content:"";display:block;width:56%;height:6px;margin:12px auto 0;border-radius:3px;background:var(--accent)}
+.sub{margin-top:14px;font-weight:700;font-size:clamp(12px,2.6vw,14px);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.pop{animation:pop .3s var(--ease-out) both}
+@keyframes pop{from{opacity:0;transform:scale(1.15)}to{opacity:1;transform:none}}
+.result{position:fixed;inset:0;z-index:8;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;
+  background:color-mix(in srgb,var(--paper) 94%,transparent)}
+.result.on{display:flex}
+.result h2{margin:0;font-family:"Oswald",sans-serif;font-weight:600;font-size:clamp(28px,7vw,48px);line-height:1.05;text-transform:uppercase;color:var(--ink)}
+.result h2::after{content:"";display:block;width:48px;height:5px;margin:12px auto 0;border-radius:3px;background:var(--accent)}
+.result.lose h2::after{background:var(--ink-2)}
+.result p{max-width:38ch;margin:14px 0 0;font-size:clamp(14px,3.1vw,16px);line-height:1.5}
+.again{margin-top:20px;min-height:44px;padding:10px 22px;border:0;border-radius:4px;cursor:pointer;background:var(--ink);color:#fff;
+  font-family:"Oswald",sans-serif;font-weight:600;font-size:15px;letter-spacing:.06em;text-transform:uppercase;transition:transform .16s var(--ease-out)}
+.again:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+/* the play surface takes keyboard focus so Tab always has somewhere to land inside the demo */
+.surface:focus{outline:none}
+.surface:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+body.micro .again{display:none}
+body.still .hud,body.still .center,body.still .result{display:none!important}
+@media (prefers-reduced-motion:reduce){.pop{animation:none}}
+@media (prefers-reduced-motion:no-preference){
+  .again:active{transform:scale(.97)}
+  body.fit #stage{transition:transform .5s var(--ease-out)}
+  body.attract .title::after{animation:bar 1.8s ease-in-out infinite}
+  @keyframes bar{50%{transform:scaleX(.55)}}
+}
+#wall{position:fixed;inset:0;overflow:hidden}
+#photo{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:0 0;overflow:hidden;background:#cfe4f3}
+#scene{display:block;width:100%;height:100%}
+#frame{position:absolute;box-sizing:border-box;border:12px solid #fff;outline:4px solid var(--ink);pointer-events:none;
+  box-shadow:0 14px 30px rgba(36,38,43,.16);transition:opacity .2s var(--ease-out)}
+body.inside #frame{opacity:0}
+#enter{position:absolute;border:0;background:transparent;cursor:pointer;padding:0}
+#enter:focus-visible{outline:3px solid var(--accent);outline-offset:18px}
+body.inside #enter{display:none}
+.spot{cursor:pointer;opacity:0;transition:opacity .25s var(--ease-out)}
+body.inside .spot,body.still .spot{opacity:1}
+.spot:focus{outline:none}
+.spot:focus-visible .core{stroke:var(--accent)}
+.spot .ring{fill:none;stroke:var(--accent);stroke-width:4;transform-box:fill-box;transform-origin:center}
+.spot.found .ring{display:none}
+.spot.found .core{fill:var(--accent)}
+@media (prefers-reduced-motion:no-preference){
+  .spot .ring{animation:ring 1.4s ease-out infinite}
+  @keyframes ring{from{transform:scale(.7);opacity:1}to{transform:scale(1.5);opacity:0}}
+}
+</style>
+</head>
+<body class="attract">
+<div id="stage">
+<div id="wall">
+  <div id="frame" aria-hidden="true"></div>
+  <div id="photo">
+    <svg id="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" role="img" aria-label="A photograph of a house by a lake, with a tree and a small sailboat.">
+      <g id="sky"><rect x="-40" y="-40" width="480" height="380" fill="#cfe4f3"/><circle cx="318" cy="64" r="22" fill="#f2c230"/></g>
+      <g id="far"><path d="M-40 176 Q 60 118 150 160 T 300 150 T 440 136 V340 H-40Z" fill="#b3d9bf"/></g>
+      <g id="mid">
+        <rect x="-40" y="200" width="480" height="140" fill="#d6e9b8"/>
+        <ellipse cx="96" cy="252" rx="128" ry="34" fill="#8dc0ea"/>
+        <path d="M262 300 C 262 262 290 236 262 208" fill="none" stroke="#f1d8a4" stroke-width="12" stroke-linecap="round"/>
+        <rect x="106" y="146" width="10" height="56" fill="#8e5b33"/>
+        <circle cx="111" cy="134" r="28" fill="#3aa35b" stroke="#24262b" stroke-width="4"/>
+        <rect x="220" y="150" width="80" height="58" fill="#fff" stroke="#24262b" stroke-width="4"/>
+        <path d="M212 152 L260 112 L308 152 Z" fill="#e2453c" stroke="#24262b" stroke-width="4" stroke-linejoin="round"/>
+        <rect x="230" y="162" width="14" height="14" fill="#8dc0ea" stroke="#24262b" stroke-width="3"/>
+        <rect x="254" y="178" width="16" height="30" fill="#24262b"/>
+        <path d="M62 250 h48 l-8 12 h-32z" fill="#fff" stroke="#24262b" stroke-width="3" stroke-linejoin="round"/>
+        <line x1="86" y1="250" x2="86" y2="220" stroke="#24262b" stroke-width="3"/>
+        <path d="M86 222 L106 246 L86 246 Z" fill="#f29b1f" stroke="#24262b" stroke-width="3" stroke-linejoin="round"/>
+        <polyline id="mline" points="" fill="none" stroke="#e8833a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        <g id="spots"></g>
+      </g>
+      <g id="near"><circle cx="356" cy="268" r="9" fill="#dd4d8d" stroke="#24262b" stroke-width="3"/><circle cx="378" cy="282" r="7" fill="#f2c230" stroke="#24262b" stroke-width="3"/><circle cx="20" cy="290" r="8" fill="#8b57d6" stroke="#24262b" stroke-width="3"/></g>
+    </svg>
+  </div>
+  <button id="enter" type="button" aria-label="Step into the photograph"></button>
+</div>
+</div>
+<div class="hud" aria-hidden="true">
+  <svg class="clock" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="9"/><circle class="arc" id="clockArc" cx="12" cy="12" r="9"/></svg>
+  <span class="cmd">Step in!</span><span class="count" id="count"></span>
+</div>
+<div class="center attract" id="center"><div class="title" id="bigTitle">Step in!</div><div class="sub pulse" id="bigSub">Tap to play</div></div>
+<div class="result" id="result" role="status" aria-live="polite"><h2 id="resTitle"></h2><p id="resNote"></p><button class="again" id="again" type="button">Play again</button></div>
+<script>
+/* Shared microgame runtime: attract, command flash, timed play, result. */
+var K=(function(){
+  var q=new URLSearchParams(location.search), b=document.body;
+  var K={MICRO:q.has('micro'),STILL:q.has('still'),TEST:q.has('test'),state:'attract'};
+  K.AUTO=q.has('auto')||K.MICRO;
+  K.reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(q.has('embed'))b.classList.add('embed');
+  var FIT=document.getElementById('center').classList.contains('veil');
+  if(FIT){b.classList.add('fit');document.getElementById('center').classList.remove('veil');}
+  if(K.MICRO)b.classList.add('micro');
+  if(K.STILL)b.classList.add('still');
+  var center=document.getElementById('center'),big=document.getElementById('bigTitle'),sub=document.getElementById('bigSub'),
+      res=document.getElementById('result'),resT=document.getElementById('resTitle'),resN=document.getElementById('resNote'),
+      again=document.getElementById('again'),arc=document.getElementById('clockArc'),count=document.getElementById('count');
+  var CIRC=2*Math.PI*9;arc.style.strokeDasharray=String(CIRC);
+  var game=null,timeLeft=0,duration=1,last=0;
+  function setClock(f){arc.style.strokeDashoffset=String(CIRC*(1-Math.max(0,Math.min(1,f))));}
+  K.setCount=function(t){count.textContent=t;};
+  /* fit: scale the scene into the space under the title block */
+  function fit(){
+    if(!FIT)return;
+    var top=sub.getBoundingClientRect().bottom+16,H=window.innerHeight;
+    if(!top||top>H*0.8)return;
+    var s=Math.max(0.3,Math.min(0.64,(H-top-10)/H));
+    b.style.setProperty('--fit-y',Math.round(top)+'px');b.style.setProperty('--fit-s',s.toFixed(3));
+  }
+  fit();window.addEventListener('resize',function(){if(K.state==='attract')fit();});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(K.state==='attract')fit();});
+  if(FIT)document.addEventListener('pointerdown',function(e){if(K.state==='attract'&&!K.STILL&&!(e.target.closest&&e.target.closest('button')))K.start();});
+  K.timeFraction=function(){return timeLeft/duration;};
+  K.start=function(){
+    if(K.state==='play'||K.state==='cmd')return;
+    res.classList.remove('on');b.classList.remove('attract');center.classList.remove('attract');center.classList.remove('veil');
+    K.state='cmd';duration=game.duration(K.MICRO);timeLeft=duration;setClock(1);
+    if(game.reset)game.reset();
+    center.style.display='flex';big.textContent=game.cmd;sub.textContent=game.go||'';sub.classList.remove('pulse');
+    big.classList.remove('pop');void big.offsetWidth;big.classList.add('pop');
+    setTimeout(function(){if(K.state!=='cmd')return;K.state='play';center.style.display='none';if(game.begin)game.begin();},K.MICRO?550:750);
+  };
+  K.finish=function(win){
+    if(K.state!=='play')return;
+    K.state='done';
+    resT.textContent=win?game.winTitle:game.loseTitle;resN.textContent=win?game.winNote:game.loseNote;
+    res.classList.toggle('lose',!win);
+    setTimeout(function(){res.classList.add('on');if(!K.MICRO)again.focus({preventScroll:true});},win?(game.winDelay||0):0);
+    try{if(window.parent!==window)window.parent.postMessage({source:'tamu-microgame',game:game.id,type:'result',win:win},'*');}catch(e){}
+  };
+  K.go=function(g){
+    game=g;
+    if(g.init)g.init();
+    if(K.STILL){if(g.still)g.still();return;}
+    function loop(ts){
+      var dt=Math.min((ts-(last||ts))/1000,0.05);last=ts;
+      if(K.state==='play'){timeLeft-=dt;setClock(timeLeft/duration);if(timeLeft<=0){if(g.timeout)g.timeout();K.finish(false);}}
+      if(g.frame)g.frame(dt,K.state);
+      requestAnimationFrame(loop);
+    }
+    if(K.AUTO)K.start();
+    requestAnimationFrame(loop);
+  };
+  again.addEventListener('click',function(){K.start();});
+  window.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){try{if(window.parent!==window)window.parent.postMessage({source:'tamu-microgame',type:'escape'},'*');}catch(x){}return;}
+    if(K.state==='attract'&&(e.key==='Enter'||e.key===' ')){e.preventDefault();K.start();}
+  });
+  window.addEventListener('message',function(e){if(e.data&&e.data.source==='tamu-arcade'&&e.data.type==='start')K.start();});
+  return K;
+})();
+</script>
+<script>
+(function(){
+  var NS='http://www.w3.org/2000/svg';
+  var photo=document.getElementById('photo'),frame=document.getElementById('frame'),enter=document.getElementById('enter'),
+      spotsG=document.getElementById('spots'),mline=document.getElementById('mline'),body=document.body;
+  var layers={sky:document.getElementById('sky'),far:document.getElementById('far'),mid:document.getElementById('mid'),near:document.getElementById('near')};
+  var SPOTS=[{x:262,y:192,label:'the front door'},{x:111,y:134,label:'the tree'},{x:86,y:236,label:'the sailboat'}];
+  var inside=false,found=[],spotEls=[],anim=null,W=0,H=0,rect=null,titleBottom=0;
+  function framed(){
+    W=window.innerWidth;H=window.innerHeight;
+    /* the frame sits below the title block, as large as the space allows */
+    var sub=document.getElementById('bigSub').getBoundingClientRect(),top=(titleBottom||sub.bottom)+18;titleBottom=titleBottom||sub.bottom;
+    var room=H-top-34,s=Math.max(0.3,Math.min(W/H>1.25?0.5:0.6,room/H)),w=W*s,h=H*s,x=(W-w)/2,y=top+16+Math.max(0,(room-h)/2);
+    rect={x:x,y:y,w:w,h:h,s:s};return rect;
+  }
+  function place(){
+    var r=framed();
+    if(!inside)photo.style.transform='translate('+r.x+'px,'+r.y+'px) scale('+r.s+')';
+    frame.style.left=(r.x-12)+'px';frame.style.top=(r.y-12)+'px';frame.style.width=(r.w+24)+'px';frame.style.height=(r.h+24)+'px';
+    enter.style.left=r.x+'px';enter.style.top=r.y+'px';enter.style.width=r.w+'px';enter.style.height=r.h+'px';
+  }
+  window.addEventListener('resize',function(){titleBottom=0;place();});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(!inside){titleBottom=0;place();}});
+  SPOTS.forEach(function(s,i){
+    var g=document.createElementNS(NS,'g');g.setAttribute('class','spot');g.setAttribute('tabindex','-1');g.setAttribute('role','button');
+    g.setAttribute('aria-label','Remember '+s.label);
+    var ring=document.createElementNS(NS,'circle');ring.setAttribute('class','ring');ring.setAttribute('cx',s.x);ring.setAttribute('cy',s.y);ring.setAttribute('r',14);
+    var core=document.createElementNS(NS,'circle');core.setAttribute('class','core');core.setAttribute('cx',s.x);core.setAttribute('cy',s.y);core.setAttribute('r',10);
+    core.setAttribute('fill','#fff');core.setAttribute('stroke','#24262b');core.setAttribute('stroke-width','4');
+    var hit=document.createElementNS(NS,'circle');hit.setAttribute('cx',s.x);hit.setAttribute('cy',s.y);hit.setAttribute('r',24);hit.setAttribute('fill','transparent');
+    g.appendChild(ring);g.appendChild(core);g.appendChild(hit);spotsG.appendChild(g);
+    g._i=i;spotEls.push(g);
+    g.addEventListener('click',function(){pick(g);});
+    g.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(g);}});
+  });
+  function drawLine(){mline.setAttribute('points',found.map(function(i){return SPOTS[i].x+','+SPOTS[i].y;}).join(' '));}
+  function pick(g){
+    if(K.state!=='play'||!inside||g.classList.contains('found'))return;
+    g.classList.add('found');found.push(g._i);drawLine();K.setCount(found.length+'/3');
+    if(found.length>=3)K.finish(true);
+  }
+  function stepIn(){
+    if(inside)return;
+    if(K.state==='attract'){K.start();return;}
+    if(K.state!=='play')return;
+    inside=true;body.classList.add('inside');
+    var from=photo.style.transform;photo.style.transform='none';
+    if(!K.reduce&&photo.animate){anim=photo.animate([{transform:from},{transform:'none'}],{duration:650,easing:'cubic-bezier(0.23,1,0.32,1)'});}
+    spotEls.forEach(function(g){g.setAttribute('tabindex','0');});
+    setTimeout(function(){if(inside&&spotEls[0])spotEls[0].focus({preventScroll:true});},K.reduce?0:400);
+  }
+  enter.addEventListener('click',stepIn);
+  document.getElementById('wall').addEventListener('pointerdown',function(e){if(K.state==='attract'&&e.target!==enter)K.start();});
+  window.addEventListener('pointermove',function(e){
+    if(!inside||K.reduce)return;
+    var nx=e.clientX/window.innerWidth-0.5,ny=e.clientY/window.innerHeight-0.5;
+    layers.sky.setAttribute('transform','translate('+(-nx*4)+','+(-ny*3)+')');
+    layers.far.setAttribute('transform','translate('+(-nx*8)+','+(-ny*5)+')');
+    layers.mid.setAttribute('transform','translate('+(-nx*14)+','+(-ny*8)+')');
+    layers.near.setAttribute('transform','translate('+(-nx*22)+','+(-ny*12)+')');
+  });
+  function reset(){
+    inside=false;body.classList.remove('inside');if(anim){anim.cancel();anim=null;}
+    found=[];drawLine();K.setCount('0/3');
+    spotEls.forEach(function(g){g.classList.remove('found');g.setAttribute('tabindex','-1');});
+    ['sky','far','mid','near'].forEach(function(k){layers[k].removeAttribute('transform');});
+    place();
+  }
+  K.go({
+    id:'step',cmd:'Step in!',go:'Tap the photo',winDelay:700,
+    duration:function(m){return m?7:12;},
+    winTitle:'Memory shared',winNote:'In Creative Care you keep sight of your own surroundings, then step inside a personal photograph and talk about your past from within it.',
+    loseTitle:'Time!',loseNote:'Tap the photo to step inside, then find the three moments it holds.',
+    init:function(){place();},
+    reset:reset,
+    begin:function(){enter.focus({preventScroll:true});},
+    still:function(){inside=true;body.classList.add('inside');photo.style.transform='none';spotEls[1].classList.add('found');spotEls[0].classList.add('found');found=[1,0];drawLine();}
+  });
+  if(K.TEST)window.__G={
+    get state(){return K.state;},
+    enterPoint:function(){var r=enter.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};},
+    spotPoints:function(){return spotEls.filter(function(g){return !g.classList.contains('found');}).map(function(g){var r=g.querySelector('.core').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};});}
+  };
+})();
+</script>
+</body>
+</html>
