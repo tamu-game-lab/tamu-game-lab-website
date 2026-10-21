@@ -50,6 +50,7 @@
   ::selection{background:var(--maroon);color:#fff}
   :focus-visible{outline:2px solid var(--maroon);outline-offset:3px}
   button{font:inherit}
+  [hidden]{display:none!important}
 
   .wrap{
     max-width:1248px;margin-inline:auto;
@@ -135,7 +136,7 @@
   .hero{text-align:center;padding-block:72px 0}
   .hero h1{font-size:clamp(2rem,5.5vw,3.4rem)}
   .cta-row{margin-top:34px;display:flex;gap:16px 30px;justify-content:center;align-items:center;flex-wrap:wrap}
-  .hero-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;max-width:980px;margin:56px auto 0;text-decoration:none}
+  .hero-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;max-width:1080px;margin:56px auto 0;text-decoration:none}
   .hero-strip .thumb{border:1px solid var(--line);border-radius:6px;transition:transform 200ms var(--ease-out),border-color 200ms ease}
   .hero-strip:focus-visible{outline:none}
   .hero-strip:focus-visible .thumb{outline:2px solid var(--maroon);outline-offset:3px}
@@ -143,7 +144,9 @@
   .pillars p{margin:10px auto 0;max-width:34ch;font-size:.984rem;line-height:1.65}
 
   /* ---------- showcase ---------- */
-  .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+  /* seven projects: full rows of four, and the last row centered under them */
+  .grid{display:flex;flex-wrap:wrap;justify-content:center;gap:24px}
+  .grid > .cabinet{flex:0 0 calc((100% - 72px) / 4);min-width:0}
   .cabinet{
     position:relative;display:flex;flex-direction:column;
     background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden;
@@ -182,10 +185,9 @@
   .prose{max-width:66ch;margin:56px auto 0;font-size:1.0625rem;line-height:1.75}
   .prose p{text-wrap:pretty}
   .prose p + p{margin-top:1.1em}
-  .prose .section-h{margin:2.6em 0 .75em}
   .people{max-width:920px;margin:88px auto 0;text-align:center}
   .people-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:48px;row-gap:0;margin-top:36px}
-  .person{display:grid;grid-row:span 6;grid-template-rows:subgrid;justify-items:center;align-content:start}
+  .person{display:grid;grid-row:span 5;grid-template-rows:subgrid;justify-items:center;align-content:start}
   .person img{
     display:block;width:148px;height:148px;margin:0 auto;
     border-radius:50%;object-fit:cover;background:var(--limestone);
@@ -194,12 +196,17 @@
   .role{margin-top:4px;font-weight:700;color:var(--maroon)}
   .detail{margin:6px auto 0;max-width:36ch;font-size:.9375rem;line-height:1.55;color:var(--mid);text-wrap:balance}
   .person a{display:inline-block;margin-top:12px;font-weight:600}
-  .collabs{max-width:960px;margin:88px auto 0;text-align:center}
-  .collab-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:36px;row-gap:0;margin-top:30px}
-  .collab-item{display:grid;grid-row:span 3;grid-template-rows:subgrid;justify-items:center;align-content:start}
-  .collab-name{font-weight:700;font-size:1.0625rem;line-height:1.35;color:var(--ink)}
-  .collab-org{margin-top:6px;max-width:30ch;font-size:.9375rem;line-height:1.55;color:var(--mid);text-wrap:balance}
-  .collab-item a{margin-top:10px;font-weight:600}
+  .collabs{max-width:1040px;margin:88px auto 0;text-align:center}
+  .collab-list{display:flex;flex-wrap:wrap;justify-content:center;gap:36px 20px;margin-top:36px}
+  .collab-list > li{flex:0 0 152px;min-width:0}
+  .collab{display:flex;flex-direction:column;align-items:center;gap:14px;height:100%;padding:6px 4px;color:var(--ink);text-decoration:none}
+  .collab-mark{display:grid;place-items:center;width:100%;height:88px}
+  .collab-mark img{display:block}
+  .collab-mark .face{width:88px;height:88px;border-radius:50%;object-fit:cover;background:var(--limestone)}
+  .collab-mark .wordmark{width:auto;max-width:min(132px,100%);max-height:44px;height:auto}
+  .collab-name{font-weight:700;font-size:.9375rem;line-height:1.4;text-wrap:balance;
+    text-decoration:underline;text-decoration-color:transparent;text-underline-offset:.24em;transition:color 150ms ease,text-decoration-color 150ms ease}
+  .collab:hover .collab-name{color:var(--maroon);text-decoration-color:rgba(80,0,0,.45)}
   .join{max-width:640px;margin:88px auto 0;padding-top:48px;border-top:1px solid var(--line);text-align:center}
   .join p{text-wrap:balance}
   .join .btn{margin-top:22px}
@@ -207,17 +214,19 @@
   /* ---------- contact ---------- */
   .contact-block{max-width:600px;margin:0 auto;text-align:center;line-height:1.8}
   .contact-block p{text-wrap:balance}
-  .email-row{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:10px 14px;margin:16px 0 14px}
+  .email-block{display:flex;flex-direction:column;align-items:center;gap:4px;margin:14px 0 18px}
   .contact-email{
-    font-family:var(--display);font-weight:600;font-size:1.625rem;letter-spacing:.02em;
+    font-family:var(--display);font-weight:600;font-size:1.625rem;line-height:1.4;letter-spacing:.02em;
     color:var(--maroon);text-decoration:underline;text-decoration-color:rgba(80,0,0,.35);text-underline-offset:.24em;
   }
   .contact-email:hover{text-decoration-color:var(--maroon)}
   .copy-btn{
-    min-height:36px;padding:6px 12px;border:1px solid var(--line);border-radius:4px;background:var(--paper);
-    font-size:.875rem;font-weight:600;color:var(--body);cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:2px 9px;
+    border:1px solid var(--line);border-radius:4px;background:var(--paper);
+    font-size:.8125rem;font-weight:600;line-height:1.3;color:var(--mid);cursor:pointer;
     transition:border-color 150ms ease,color 150ms ease,transform 160ms var(--ease-out);
   }
+  .copy-btn svg{width:13px;height:13px;flex:none}
   .copy-btn:hover{border-color:var(--maroon);color:var(--maroon)}
   address{margin-top:28px;font-style:normal;font-size:.9375rem;color:var(--mid);line-height:1.7}
 
@@ -289,14 +298,13 @@
 
   /* ---------- responsive ---------- */
   @media (max-width:1039px){
-    .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid > .cabinet{flex-basis:calc((100% - 24px) / 2)}
+    .collab-list{max-width:560px;margin-inline:auto}
   }
   @media (max-width:760px){
     .pillars{grid-template-columns:1fr;gap:30px;margin-top:64px}
     .people-list{grid-template-columns:1fr}
     .person + .person{margin-top:44px}
-    .collab-list{grid-template-columns:1fr}
-    .collab-item + .collab-item{margin-top:32px}
   }
   @media (max-width:639px){
     .wrap{padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
@@ -305,8 +313,11 @@
     .nav{justify-content:center;gap:0 20px}
     .hero{padding-block:52px 0}
     .page-head{padding-block:48px 32px}
-    .hero-strip{gap:10px;margin-top:44px}
-    .grid{grid-template-columns:1fr;gap:18px}
+    .hero-strip{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:44px}
+    .grid{gap:18px}
+    .grid > .cabinet{flex-basis:100%}
+    .collab-list{gap:28px 12px}
+    .collab-list > li{flex-basis:calc((100% - 12px) / 2)}
     .contact-email{font-size:1.375rem}
     .site-footer{margin-top:80px}
     .foot-unit{display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -364,19 +375,20 @@
     </div>
 
     <a class="hero-strip" href="#showcase" data-page="showcase" aria-label="View the showcase">
-      <span class="thumb"><img src="assets/projects/creative-care.webp" alt="" width="1280" height="720"></span>
+      <span class="thumb"><img src="assets/projects/duorehab.webp" alt="" width="1280" height="720"></span>
       <span class="thumb"><img src="assets/projects/lob-game.webp" alt="" width="1280" height="720"></span>
-      <span class="thumb"><img src="assets/projects/xr-piano.webp" alt="" width="1280" height="720"></span>
+      <span class="thumb"><img src="assets/projects/social-media-literacy.webp" alt="" width="1280" height="720"></span>
+      <span class="thumb"><img src="assets/projects/eye-rehab.webp" alt="" width="610" height="343"></span>
     </a>
 
     <div class="pillars">
       <div>
         <h2 class="section-h">Health</h2>
-        <p>Games and virtual reality for rehabilitation, therapy, and wellbeing, designed and evaluated with the people who use them.</p>
+        <p>Games and virtual reality for rehabilitation, therapy, and wellbeing.</p>
       </div>
       <div>
         <h2 class="section-h">Learning</h2>
-        <p>Interactive experiences that build real skills, from construction management to media literacy, through practice rather than observation.</p>
+        <p>Interactive experiences that build real skills, from construction management to media literacy.</p>
       </div>
       <div>
         <h2 class="section-h">XR</h2>
@@ -396,8 +408,6 @@
 
     <div class="prose">
       <p>The Texas A&amp;M Game Lab designs, builds, and studies games and extended reality (XR) experiences for health, rehabilitation, learning, and creative expression. Every project in the showcase is a working prototype, developed and evaluated with real users.</p>
-
-      <h2 class="section-h">How we design</h2>
       <p>Most games aim their mechanics at stimulation: shooting something, or dialogue that exists to spring a mystery. Our projects sit in the sweet spot between simulating everything and merely gamifying, and all of it serves behavioral change. The lab is building a framework so the approach holds across many different situations.</p>
     </div>
 
@@ -408,7 +418,6 @@
           <img src="assets/people/bryan-kim.webp" alt="Bryan Kim" width="148" height="148" loading="lazy">
           <h3>Bryan Kim</h3>
           <p class="role">Director</p>
-          <p class="detail">Assistant Professor, Performance, Visualization &amp; Fine Arts</p>
           <p class="detail">Serious games and XR for health, embodied learning, and digital therapeutics</p>
           <a href="https://bryankim.org">bryankim.org</a>
         </li>
@@ -416,7 +425,6 @@
           <img src="assets/people/katie-clark.webp" alt="Katie Clark" width="148" height="148" loading="lazy">
           <h3>Katie Clark</h3>
           <p class="role">PhD Student</p>
-          <p class="detail">Texas A&amp;M University</p>
           <p class="detail">Embodied and XR museum experiences, creative aging, and accessibility</p>
           <a href="https://katie-clark.framer.website">katie-clark.framer.website</a>
         </li>
@@ -426,21 +434,11 @@
     <div class="collabs">
       <h2 class="section-h">Collaborators</h2>
       <ul class="collab-list">
-        <li class="collab-item">
-          <h3 class="collab-name">Soft Interaction Lab</h3>
-          <p class="collab-org">Texas A&amp;M University</p>
-          <a href="https://www.softinteraction.com">softinteraction.com</a>
-        </li>
-        <li class="collab-item">
-          <h3 class="collab-name">PVFA Music Program</h3>
-          <p class="collab-org">College of Performance, Visualization &amp; Fine Arts, Texas A&amp;M University</p>
-          <a href="https://pvfa.tamu.edu/academics/music-program/">pvfa.tamu.edu</a>
-        </li>
-        <li class="collab-item">
-          <h3 class="collab-name">REGAL Lab</h3>
-          <p class="collab-org">Research in Enactive Games, AI, and Learning, College of Education, University of Maryland</p>
-          <a href="https://regal.umd.edu/">regal.umd.edu</a>
-        </li>
+        <li><a class="collab" href="https://www.softinteraction.com"><span class="collab-mark"><img class="wordmark" src="assets/collaborators/soft-interaction-lab.png" alt="" width="300" height="108" loading="lazy"></span><span class="collab-name">Soft Interaction Lab</span></a></li>
+        <li><a class="collab" href="https://regal.umd.edu/"><span class="collab-mark"><img class="wordmark" src="assets/collaborators/regal-lab.png" alt="" width="301" height="63" loading="lazy"></span><span class="collab-name">REGAL Lab</span></a></li>
+        <li><a class="collab" href="https://pvfa.tamu.edu/staff/alessandro-fadini/"><span class="collab-mark"><img class="face" src="assets/collaborators/alessandro-fadini.webp" alt="" width="88" height="88" loading="lazy"></span><span class="collab-name">Dr. Alessandro Fadini</span></a></li>
+        <li><a class="collab" href="https://www.arch.tamu.edu/directory/zofia-k-rybkowski/"><span class="collab-mark"><img class="face" src="assets/collaborators/zofia-rybkowski.webp" alt="" width="88" height="88" loading="lazy"></span><span class="collab-name">Dr. Zofia Rybkowski</span></a></li>
+        <li><a class="collab" href="https://lutang.org/"><span class="collab-mark"><img class="face" src="assets/collaborators/lu-tang.webp" alt="" width="88" height="88" loading="lazy"></span><span class="collab-name">Dr. Lu Tang</span></a></li>
       </ul>
     </div>
 
@@ -462,7 +460,7 @@
         <div class="thumb"><img src="assets/projects/creative-care.webp" alt="" width="1280" height="720" loading="lazy"></div>
         <div class="meta">
           <h2 class="card-title"><button class="open" type="button" data-open="creative-care" aria-haspopup="dialog">Creative Care</button></h2>
-          <p>VR reminiscence therapy for older adults</p>
+          <p>XR reminiscence therapy for older adults</p>
           <div class="card-foot">
             <div class="chips"><a class="chip" href="https://www.softinteraction.com">With Soft Interaction Lab</a></div>
             <span class="cue">Play the demo</span>
@@ -470,7 +468,7 @@
         </div>
       </li>
       <li class="cabinet">
-        <div class="thumb"><img src="assets/projects/eye-rehab.webp" alt="" width="1280" height="720" loading="lazy"></div>
+        <div class="thumb"><img src="assets/projects/eye-rehab.webp" alt="Eye Rehab screenshot of the Carrot Snowdown level in a snowy forest" width="610" height="343" loading="lazy"></div>
         <div class="meta">
           <h2 class="card-title"><button class="open" type="button" data-open="eye-rehab" aria-haspopup="dialog">Eye Rehab</button></h2>
           <p>Game-based vision rehabilitation</p>
@@ -485,7 +483,7 @@
           <h2 class="card-title"><button class="open" type="button" data-open="xr-piano" aria-haspopup="dialog">XR Piano / 88 Dimension</button></h2>
           <p>Mixed-reality jazz improvisation</p>
           <div class="card-foot">
-            <div class="chips"><a class="chip" href="https://pvfa.tamu.edu/academics/music-program/">With PVFA Music Program</a></div>
+            <div class="chips"><a class="chip" href="https://pvfa.tamu.edu/staff/alessandro-fadini/">With Dr. Alessandro Fadini</a></div>
             <span class="cue">Play the demo</span>
           </div>
         </div>
@@ -517,25 +515,16 @@
           <h2 class="card-title"><button class="open" type="button" data-open="math-education" aria-haspopup="dialog">Math Education Game</button></h2>
           <p>Game-based math learning</p>
           <div class="card-foot">
+            <div class="chips"><a class="chip" href="https://regal.umd.edu/">With University of Maryland</a></div>
             <span class="cue">Play the demo</span>
           </div>
         </div>
       </li>
       <li class="cabinet">
-        <div class="thumb"><img src="assets/projects/duorehab.webp" alt="" width="1280" height="720" loading="lazy"></div>
+        <div class="thumb"><img src="assets/projects/duorehab.webp" alt="DuoRehab session results screen with Perfect, Good, and Miss scores" width="1280" height="720" loading="lazy"></div>
         <div class="meta">
           <h2 class="card-title"><button class="open" type="button" data-open="duorehab" aria-haspopup="dialog">DuoRehab</button></h2>
-          <p>Two-player rehabilitation games</p>
-          <div class="card-foot">
-            <span class="cue">Play the demo</span>
-          </div>
-        </div>
-      </li>
-      <li class="cabinet">
-        <div class="thumb"><img src="assets/projects/wave-garden.webp" alt="" width="1280" height="720" loading="lazy"></div>
-        <div class="meta">
-          <h2 class="card-title"><button class="open" type="button" data-open="wave-garden" aria-haspopup="dialog">Wave Garden</button></h2>
-          <p>An experimental garden shaped by play</p>
+          <p>Rehab moves you act out, like Just Dance</p>
           <div class="card-foot">
             <span class="cue">Play the demo</span>
           </div>
@@ -552,9 +541,9 @@
     </div>
     <div class="contact-block">
       <p>For questions, collaborations, or media inquiries:</p>
-      <div class="email-row">
+      <div class="email-block">
         <a class="contact-email" id="email" href="mailto:bryankim@tamu.edu">bryankim@tamu.edu</a>
-        <button class="copy-btn" type="button" id="copy-email">Copy address</button>
+        <button class="copy-btn" type="button" id="copy-email"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 3v5A1.5 1.5 0 0 0 4 9.5h.5"/></svg><span id="copy-label">Copy address</span></button>
       </div>
       <p>Students interested in joining the Game Lab as researchers are encouraged to reach out.</p>
       <address>College of Performance, Visualization &amp; Fine Arts<br>Texas A&amp;M University, College Station, Texas</address>
@@ -597,10 +586,10 @@
 
   /* Project copy comes from the lab's own descriptions. */
   var PROJECTS={
-    'creative-care':{title:'Creative Care',hook:'VR reminiscence therapy for older adults',
+    'creative-care':{title:'Creative Care',hook:'XR reminiscence therapy for older adults',
       blurb:'Familiar scenes, music, and memory prompts rebuilt as gentle interactive spaces, designed to support reminiscence therapy for older adults.',
       words:'An immersive photo experience: in XR you keep sight of your own surroundings, then step inside a personal photograph and talk about your past from within it. Reminiscence practice built for elders.',
-      collab:{name:'Soft Interaction Lab',url:'https://www.softinteraction.com'},
+      collabs:[{name:'Soft Interaction Lab',url:'https://www.softinteraction.com'}],
       game:'games/step.html',
       howto:'Tap the photo to step inside it, then tap the three moments it holds.'},
     'eye-rehab':{title:'Eye Rehab',hook:'Game-based vision rehabilitation',
@@ -611,13 +600,14 @@
     'xr-piano':{title:'XR Piano / 88 Dimension',hook:'Mixed-reality jazz improvisation',
       blurb:'A passthrough mixed-reality layer over an acoustic piano that visualizes jazz improvisation in real time as the musician plays.',
       words:'You progress through different dimensions, each unlocked by learning a different kind of jazz knowledge. Improvisation as a world you climb through, in XR.',
-      collab:{name:'PVFA Music Program',url:'https://pvfa.tamu.edu/academics/music-program/'},
+      collabs:[{name:'Dr. Alessandro Fadini',url:'https://pvfa.tamu.edu/staff/alessandro-fadini/'}],
       game:'games/play.html',
       howto:'Play the lit keys in order by tapping them or typing: A to J for white keys, W E T Y U for black keys. Each chord you finish opens a new dimension.'},
     'lob-game':{title:'LOB Game',hook:'Strategy game for construction education',
       blurb:'A construction-science strategy game about managing a job site: logistics, sequencing, and resource decisions under realistic constraints.',
       words:'You play the construction manager bridging the job site and the project owner, and the play is the schedule itself: penciling and smoothing Line of Balance curves. Built working directly with the construction industry.',
-      collab:{name:'Soft Interaction Lab',url:'https://www.softinteraction.com'},
+      collabs:[{name:'Soft Interaction Lab',url:'https://www.softinteraction.com'},
+        {name:'Dr. Zofia Rybkowski',url:'https://www.arch.tamu.edu/directory/zofia-k-rybkowski/'}],
       game:'games/smooth.html',
       howto:'Drag the pipe crew’s handles, or focus one and use the arrow keys, until no schedule lines cross.'},
     'social-media-literacy':{title:'Social Media Literacy',hook:'Recognizing manipulation in the feed',
@@ -627,16 +617,13 @@
       howto:'Two posts in the feed are phishing. Flag both before time runs out.'},
     'math-education':{title:'Math Education Game',hook:'Game-based math learning',
       blurb:'Math practice redesigned as play: puzzle levels that build number sense and problem-solving through experimentation rather than drills.',
+      collabs:[{name:'Dr. Fengfeng Ke, University of Maryland',url:'https://regal.umd.edu/'}],
       game:'games/deliver.html',
       howto:'Fly the drone to the point each order names. Tap a point on the grid, or use the arrow keys and press Space.'},
-    'duorehab':{title:'DuoRehab',hook:'Two-player rehabilitation games',
-      blurb:'Rehabilitation exercises designed as two-player games, built around partnership and shared motivation.',
+    'duorehab':{title:'DuoRehab',hook:'Rehab moves you act out, like Just Dance',
+      blurb:'A single-player rehab game. You act out each move, like Just Dance but in rehab form, and the camera scores how closely you match.',
       game:'games/move.html',
-      howto:'For two players. One presses A or taps the left side, the other presses L or taps the right side, as each circle reaches its ring.'},
-    'wave-garden':{title:'Wave Garden',hook:'An experimental garden shaped by play',
-      blurb:'An experimental prototype exploring growth, sound, and motion as interactive systems.',
-      game:'games/grow.html',
-      howto:'Tap the garden to send out waves. Every plant a wave reaches grows.'}
+      howto:'Each card is a move. Press the matching arrow key or button as the card reaches the ring.'}
   };
 
   var root=document.documentElement;
@@ -675,16 +662,17 @@
   /* ---------- copy email ---------- */
   var copyBtn=document.getElementById('copy-email');
   copyBtn.addEventListener('click',function(){
-    var text='bryankim@tamu.edu';
+    var text='bryankim@tamu.edu', label=document.getElementById('copy-label');
     function selectIt(){
       var r=document.createRange(); r.selectNodeContents(document.getElementById('email'));
       var sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
-      copyBtn.textContent='Selected, press copy';
+      label.textContent='Selected, press copy';
     }
     try{
-      navigator.clipboard.writeText(text).then(function(){ copyBtn.textContent='Copied'; },selectIt);
+      navigator.clipboard.writeText(text).then(function(){ label.textContent='Copied'; },selectIt);
     }catch(e){ selectIt(); }
-    setTimeout(function(){ copyBtn.textContent='Copy address'; },2400);
+    clearTimeout(copyBtn._t);
+    copyBtn._t=setTimeout(function(){ label.textContent='Copy address'; },2400);
   });
 
   /* ---------- cabinet dialog ---------- */
@@ -712,10 +700,11 @@
     var howto=document.getElementById('cab-howto');
     howto.hidden=!p.howto; howto.textContent=p.howto?tieLast(p.howto):'';
     var chips=document.getElementById('cab-chips'); chips.innerHTML='';
-    if(p.collab && p.collab.url){
-      var a=document.createElement('a'); a.className='chip'; a.href=p.collab.url;
-      a.textContent='With '+p.collab.name; chips.appendChild(a);
-    }
+    (p.collabs||[]).forEach(function(c){
+      var a=document.createElement('a'); a.className='chip'; a.href=c.url;
+      a.textContent='With '+c.name; chips.appendChild(a);
+    });
+    chips.hidden=!chips.childNodes.length;
     dialog.classList.toggle('is-game',!!p.game);
     return p;
   }

@@ -8,9 +8,10 @@
 @font-face{font-family:"Oswald";src:url("../assets/fonts/oswald.woff2") format("woff2");font-weight:200 700;font-display:swap}
 @font-face{font-family:"Open Sans";src:url("../assets/fonts/open-sans.woff2") format("woff2");font-weight:300 800;font-display:swap}
 :root{
-  --paper:#f4eef1;--accent:#e2453c;
+  /* one canvas for every demo, Mini Metro style: a quiet limestone grey under bold transit-line colors */
+  --paper:#eeedea;--accent:#e0443a;
   --ink:#24262b;--ink-2:#5e6370;--card:#ffffff;--line:rgba(36,38,43,.14);
-  --red:#e2453c;--orange:#f29b1f;--yellow:#f2c230;--green:#3aa35b;--teal:#18a39a;--blue:#2e6fd8;--purple:#8b57d6;--pink:#dd4d8d;--brown:#8e5b33;
+  --red:#e0443a;--orange:#ee8a1f;--yellow:#f2b21c;--green:#2e9e57;--teal:#13998f;--blue:#2e6fd8;--purple:#7d53c8;--brown:#8e5b33;
   --ease-out:cubic-bezier(0.23,1,0.32,1);
 }
 *{box-sizing:border-box}
@@ -45,10 +46,10 @@ body.fit .center.attract .title{font-size:clamp(32px,8.5vw,66px)}
 .result p{max-width:38ch;margin:14px 0 0;font-size:clamp(14px,3.1vw,16px);line-height:1.5}
 .again{margin-top:20px;min-height:44px;padding:10px 22px;border:0;border-radius:4px;cursor:pointer;background:var(--ink);color:#fff;
   font-family:"Oswald",sans-serif;font-weight:600;font-size:15px;letter-spacing:.06em;text-transform:uppercase;transition:transform .16s var(--ease-out)}
-.again:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.again:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 /* the play surface takes keyboard focus so Tab always has somewhere to land inside the demo */
 .surface:focus{outline:none}
-.surface:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.surface:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
 body.micro .again{display:none}
 body.still .hud,body.still .center,body.still .result{display:none!important}
 @media (prefers-reduced-motion:reduce){.pop{animation:none}}
@@ -70,10 +71,10 @@ body.still .hud,body.still .center,body.still .result{display:none!important}
 .who small{margin-left:6px;font-weight:400;color:var(--ink-2)}
 .kind{display:block;margin-top:2px;font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
 .txt{margin-top:5px;font-size:14.5px;line-height:1.4;overflow-wrap:anywhere}
-.link{display:block;margin-top:7px;padding:7px 9px;border-radius:8px;background:#f1edef;font-size:12.5px;color:var(--ink-2);overflow-wrap:anywhere}
+.link{display:block;margin-top:7px;padding:7px 9px;border-radius:8px;background:#f0efec;font-size:12.5px;color:var(--ink-2);overflow-wrap:anywhere}
 .flag{width:44px;height:44px;border-radius:12px;border:2px solid rgba(36,38,43,.22);background:#fff;color:var(--ink);display:grid;place-items:center;cursor:pointer;
   transition:transform .12s var(--ease-out),background-color .15s ease,border-color .15s ease}
-.flag:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.flag:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 @media (hover:hover) and (pointer:fine){.flag:hover{border-color:var(--accent)}}
 @media (prefers-reduced-motion:no-preference){.flag:active{transform:scale(.94)}}
 .flag svg{width:20px;height:20px}
@@ -174,8 +175,8 @@ var K=(function(){
   var FLAG='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M5 18V2.5"/><path d="M5 3h10l-2.4 3.6L15 10H5"/></svg>';
   var POSTS=[
     {who:'jaden.k',t:'2m',kind:'Post',txt:'practice moved to 4 tomorrow, coach said bring water',c:'#3aa35b',ink:1},
-    {who:'prize.drop.official',t:'5m',kind:'Sponsored',txt:'YOU WON 5,000 COINS! Log in with your password to claim before midnight.',link:'coinz-prize-claim.co/login',trap:true,c:'#f29b1f',ink:1},
-    {who:'maya.r',t:'9m',kind:'Post',txt:'who is going to the game friday??',c:'#8b57d6'},
+    {who:'prize.drop.official',t:'5m',kind:'Sponsored',txt:'YOU WON 5,000 COINS! Log in with your password to claim before midnight.',link:'coinz-prize-claim.co/login',trap:true,c:'#ee8a1f',ink:1},
+    {who:'maya.r',t:'9m',kind:'Post',txt:'who is going to the game friday??',c:'#7d53c8'},
     {who:'ellie_m',t:'12m',kind:'Message from a friend',txt:'omg is this you in this video??',link:'vid-share.watch/x9q2',trap:true,c:'#2e6fd8'},
     {who:'lincoln_band',t:'1h',kind:'Post',txt:'Spring concert tickets are at the front office this week.',c:'#c43a77'}
   ];

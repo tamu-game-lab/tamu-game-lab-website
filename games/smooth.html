@@ -8,9 +8,10 @@
 @font-face{font-family:"Oswald";src:url("../assets/fonts/oswald.woff2") format("woff2");font-weight:200 700;font-display:swap}
 @font-face{font-family:"Open Sans";src:url("../assets/fonts/open-sans.woff2") format("woff2");font-weight:300 800;font-display:swap}
 :root{
-  --paper:#ecedeb;--accent:#f29b1f;
+  /* one canvas for every demo, Mini Metro style: a quiet limestone grey under bold transit-line colors */
+  --paper:#eeedea;--accent:#ee8a1f;
   --ink:#24262b;--ink-2:#5e6370;--card:#ffffff;--line:rgba(36,38,43,.14);
-  --red:#e2453c;--orange:#f29b1f;--yellow:#f2c230;--green:#3aa35b;--teal:#18a39a;--blue:#2e6fd8;--purple:#8b57d6;--pink:#dd4d8d;--brown:#8e5b33;
+  --red:#e0443a;--orange:#ee8a1f;--yellow:#f2b21c;--green:#2e9e57;--teal:#13998f;--blue:#2e6fd8;--purple:#7d53c8;--brown:#8e5b33;
   --ease-out:cubic-bezier(0.23,1,0.32,1);
 }
 *{box-sizing:border-box}
@@ -45,10 +46,10 @@ body.fit .center.attract .title{font-size:clamp(32px,8.5vw,66px)}
 .result p{max-width:38ch;margin:14px 0 0;font-size:clamp(14px,3.1vw,16px);line-height:1.5}
 .again{margin-top:20px;min-height:44px;padding:10px 22px;border:0;border-radius:4px;cursor:pointer;background:var(--ink);color:#fff;
   font-family:"Oswald",sans-serif;font-weight:600;font-size:15px;letter-spacing:.06em;text-transform:uppercase;transition:transform .16s var(--ease-out)}
-.again:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.again:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 /* the play surface takes keyboard focus so Tab always has somewhere to land inside the demo */
 .surface:focus{outline:none}
-.surface:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.surface:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
 body.micro .again{display:none}
 body.still .hud,body.still .center,body.still .result{display:none!important}
 @media (prefers-reduced-motion:reduce){.pop{animation:none}}
@@ -165,11 +166,11 @@ var K=(function(){
   function xd(d){return X0+(X1-X0)*d/DAYS;}
   function yu(u){return YB-(YB-YT)*(u-1)/5;}
   function el(tag,attrs,parent){var n=document.createElementNS(NS,tag);for(var k in attrs)n.setAttribute(k,attrs[k]);if(parent)parent.appendChild(n);return n;}
-  var INK='#24262b',RED='#e2453c';
+  var INK='#24262b',RED='#e0443a';
   var crews=[
     {id:'A',name:'Excavation',color:'#8e5b33',s:0,e:10,fixed:true},
-    {id:'B',name:'Pipe laying',color:'#f29b1f',s:2,e:5,fixed:false},
-    {id:'C',name:'Backfill',color:'#3aa35b',s:7,e:17,fixed:true}
+    {id:'B',name:'Pipe laying',color:'#ee8a1f',s:2,e:5,fixed:false},
+    {id:'C',name:'Backfill',color:'#2e9e57',s:7,e:17,fixed:true}
   ];
   var A=crews[0],B=crews[1],C=crews[2];
   function at(c,u){return c.s+(c.e-c.s)*(u-1)/5;}
@@ -201,7 +202,7 @@ var K=(function(){
       'aria-label':which==='s'?'Pipe crew start day':'Pipe crew finish day'},handlesG);
     el('circle',{r:34,'class':'hit'},g);
     el('circle',{r:14,fill:'#fff',stroke:INK,'stroke-width':4,'class':'ring'},g);
-    el('circle',{r:5,fill:'#f29b1f'},g);
+    el('circle',{r:5,fill:'#ee8a1f'},g);
     var tag=el('text',{y:-24,'text-anchor':'middle','class':'lbl',fill:INK},g);
     if(which==='s')tag.setAttribute('display','none');
     g._tag=tag;g._which=which;return g;

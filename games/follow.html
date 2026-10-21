@@ -8,9 +8,10 @@
 @font-face{font-family:"Oswald";src:url("../assets/fonts/oswald.woff2") format("woff2");font-weight:200 700;font-display:swap}
 @font-face{font-family:"Open Sans";src:url("../assets/fonts/open-sans.woff2") format("woff2");font-weight:300 800;font-display:swap}
 :root{
-  --paper:#eaf1f4;--accent:#2e6fd8;
+  /* one canvas for every demo, Mini Metro style: a quiet limestone grey under bold transit-line colors */
+  --paper:#eeedea;--accent:#2e6fd8;
   --ink:#24262b;--ink-2:#5e6370;--card:#ffffff;--line:rgba(36,38,43,.14);
-  --red:#e2453c;--orange:#f29b1f;--yellow:#f2c230;--green:#3aa35b;--teal:#18a39a;--blue:#2e6fd8;--purple:#8b57d6;--pink:#dd4d8d;--brown:#8e5b33;
+  --red:#e0443a;--orange:#ee8a1f;--yellow:#f2b21c;--green:#2e9e57;--teal:#13998f;--blue:#2e6fd8;--purple:#7d53c8;--brown:#8e5b33;
   --ease-out:cubic-bezier(0.23,1,0.32,1);
 }
 *{box-sizing:border-box}
@@ -45,10 +46,10 @@ body.fit .center.attract .title{font-size:clamp(32px,8.5vw,66px)}
 .result p{max-width:38ch;margin:14px 0 0;font-size:clamp(14px,3.1vw,16px);line-height:1.5}
 .again{margin-top:20px;min-height:44px;padding:10px 22px;border:0;border-radius:4px;cursor:pointer;background:var(--ink);color:#fff;
   font-family:"Oswald",sans-serif;font-weight:600;font-size:15px;letter-spacing:.06em;text-transform:uppercase;transition:transform .16s var(--ease-out)}
-.again:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.again:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 /* the play surface takes keyboard focus so Tab always has somewhere to land inside the demo */
 .surface:focus{outline:none}
-.surface:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.surface:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
 body.micro .again{display:none}
 body.still .hud,body.still .center,body.still .result{display:none!important}
 @media (prefers-reduced-motion:reduce){.pop{animation:none}}
@@ -156,7 +157,7 @@ var K=(function(){
   var ACC='#2e6fd8',INK='#24262b';
   var t=0,locked=0,prog=0,NEED=K.MICRO?2.4:4.5;
   var ptr={x:-999,y:-999,on:false,touch:false},keys={};
-  var tgt={x:0,y:0},seg=null,flash=null,demo={x:0,y:0},trail=[],marks=null;
+  var tgt={x:0,y:0},seg=null,flash=null,demo={x:0,y:0},trail=[],old=[],stops=[],marks=null,heading=null;
   var meter=document.getElementById('meter');
   function rnd(a,b){return a+Math.random()*(b-a);}
   function pad(){return Math.max(28,Math.min(W,H)*0.14);}
@@ -173,11 +174,27 @@ var K=(function(){
     var kind=pattern[pi%pattern.length];pi++;
     if(kind==='saccade'){
       var q=randPoint(true);flash={x0:tgt.x,y0:tgt.y,x1:q.x,y1:q.y,t:0};
-      tgt.x=q.x;tgt.y=q.y;trail=[];seg={kind:'fixate',t:0,d:0.5};
+      if(trail.length>1){old.push(trail);if(old.length>2)old.shift();}
+      stops.push({x:tgt.x,y:tgt.y},{x:q.x,y:q.y});if(stops.length>4)stops.splice(0,stops.length-4);
+      tgt.x=q.x;tgt.y=q.y;trail=[{x:q.x,y:q.y}];heading=null;seg={kind:'fixate',t:0,d:0.5};
     }else{
-      var e=randPoint(false),mx=(tgt.x+e.x)/2,my=(tgt.y+e.y)/2;
-      var nx=-(e.y-tgt.y),ny=(e.x-tgt.x),L=Math.hypot(nx,ny)||1,bend=rnd(-0.35,0.35)*Math.hypot(e.x-tgt.x,e.y-tgt.y);
-      seg={kind:'pursuit',t:0,d:rnd(1.3,1.8),x0:tgt.x,y0:tgt.y,cx:mx+nx/L*bend,cy:my+ny/L*bend,x1:e.x,y1:e.y};
+      /* pick an end point that keeps the line moving forward instead of folding back on itself */
+      var e,dx,dy,d,m,diagFirst,best=null,span=Math.min(W,H)*0.3;
+      for(var tries=0;tries<24;tries++){
+        e=randPoint(false);dx=e.x-tgt.x;dy=e.y-tgt.y;d=Math.min(Math.abs(dx),Math.abs(dy));diagFirst=Math.random()<0.5;
+        m=diagFirst?{x:tgt.x+Math.sign(dx)*d,y:tgt.y+Math.sign(dy)*d}:{x:e.x-Math.sign(dx)*d,y:e.y-Math.sign(dy)*d};
+        var hx=m.x-tgt.x,hy=m.y-tgt.y;if(Math.hypot(hx,hy)<1){hx=e.x-m.x;hy=e.y-m.y;}
+        var fwd=heading?(hx*heading.x+hy*heading.y)/(Math.hypot(hx,hy)||1):1;
+        var score=(fwd>-0.05?2:0)+(Math.hypot(dx,dy)>span?1:0);
+        if(!best||score>best.score)best={e:e,m:m,score:score};
+        if(score===3)break;
+      }
+      e=best.e;m=best.m;
+      heading={x:e.x-m.x,y:e.y-m.y};var hl=Math.hypot(heading.x,heading.y);if(hl<1){heading={x:m.x-tgt.x,y:m.y-tgt.y};hl=Math.hypot(heading.x,heading.y)||1;}
+      heading.x/=hl;heading.y/=hl;
+      var a=Math.hypot(m.x-tgt.x,m.y-tgt.y),b=Math.hypot(e.x-m.x,e.y-m.y);
+      if(!trail.length)trail=[{x:tgt.x,y:tgt.y}];
+      seg={kind:'pursuit',t:0,d:rnd(1.3,1.8),p0:{x:tgt.x,y:tgt.y},p1:m,p2:e,a:a,len:(a+b)||1};
     }
   }
   function ease(u){return u<0.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;}
@@ -185,9 +202,10 @@ var K=(function(){
     if(!seg)nextSeg();
     seg.t+=dt;
     if(seg.kind==='pursuit'){
-      var u=ease(Math.min(1,seg.t/seg.d)),a=1-u;
-      tgt.x=a*a*seg.x0+2*a*u*seg.cx+u*u*seg.x1;tgt.y=a*a*seg.y0+2*a*u*seg.cy+u*u*seg.y1;
-      trail.push({x:tgt.x,y:tgt.y});if(trail.length>32)trail.shift();
+      var dist=ease(Math.min(1,seg.t/seg.d))*seg.len,A=seg.p0,B=seg.p1,C=seg.p2;
+      if(dist<=seg.a){var f=seg.a?dist/seg.a:1;tgt.x=A.x+(B.x-A.x)*f;tgt.y=A.y+(B.y-A.y)*f;}
+      else{var g=(dist-seg.a)/((seg.len-seg.a)||1);tgt.x=B.x+(C.x-B.x)*g;tgt.y=B.y+(C.y-B.y)*g;}
+      trail.push({x:tgt.x,y:tgt.y});if(trail.length>400)trail.shift();
     }
     if(seg.t>=seg.d)nextSeg();
     if(flash){flash.t+=dt;if(flash.t>0.24)flash=null;}
@@ -198,10 +216,11 @@ var K=(function(){
     cx.lineCap='round';cx.lineJoin='round';
     if(marks){cx.setLineDash([6,9]);cx.strokeStyle='rgba(36,38,43,.45)';cx.lineWidth=3;
       cx.beginPath();cx.moveTo(marks[0].x,marks[0].y);for(var m=1;m<marks.length;m++)cx.lineTo(marks[m].x,marks[m].y);cx.stroke();cx.setLineDash([]);}
-    if(trail.length>1){
-      cx.strokeStyle='rgba(46,111,216,.2)';cx.lineWidth=Math.max(8,Math.min(W,H)*0.024);
-      cx.beginPath();cx.moveTo(trail[0].x,trail[0].y);for(var i=1;i<trail.length;i++)cx.lineTo(trail[i].x,trail[i].y);cx.stroke();
-    }
+    var lw=Math.max(8,Math.min(W,H)*0.026);
+    function path(pts,col){if(pts.length<2)return;cx.strokeStyle=col;cx.lineWidth=lw;cx.beginPath();cx.moveTo(pts[0].x,pts[0].y);for(var i=1;i<pts.length;i++)cx.lineTo(pts[i].x,pts[i].y);cx.stroke();}
+    old.forEach(function(o){path(o,'rgba(46,111,216,.22)');});
+    path(trail,ACC);
+    stops.forEach(function(q){cx.fillStyle='#fff';cx.strokeStyle=INK;cx.lineWidth=4;cx.beginPath();cx.arc(q.x,q.y,Math.max(7,Math.min(W,H)*0.02),0,Math.PI*2);cx.fill();cx.stroke();});
     if(flash){cx.setLineDash([6,9]);cx.strokeStyle='rgba(36,38,43,'+(0.5*(1-flash.t/0.24))+')';cx.lineWidth=3;
       cx.beginPath();cx.moveTo(flash.x0,flash.y0);cx.lineTo(flash.x1,flash.y1);cx.stroke();cx.setLineDash([]);}
     if(marks){marks.forEach(function(q){cx.fillStyle='#fff';cx.strokeStyle=INK;cx.lineWidth=3;cx.beginPath();cx.arc(q.x,q.y,Math.max(7,Math.min(W,H)*0.02),0,Math.PI*2);cx.fill();cx.stroke();});}
@@ -224,7 +243,7 @@ var K=(function(){
     winTitle:'Session complete',winNote:'Eye Rehab trains saccades and smooth pursuit with eye tracking in VR. Your pointer stood in for your eyes.',
     loseTitle:'Out of time',loseNote:'The light kept moving. Stay on it to fill the meter.',
     init:function(){tgt.x=W*0.5;tgt.y=H*0.76;demo.x=tgt.x;demo.y=tgt.y;},
-    reset:function(){prog=0;locked=0;meter.style.transform='scaleX(0)';document.body.classList.add('playing');},
+    reset:function(){prog=0;locked=0;old=[];stops=[];trail=[];meter.style.transform='scaleX(0)';document.body.classList.add('playing');},
     frame:function(dt,s){
       t+=dt;
       if(s==='attract'){if(!K.reduce)stepTarget(dt*0.8);demo.x+=(tgt.x-demo.x)*Math.min(1,dt*3.2);demo.y+=(tgt.y-demo.y)*Math.min(1,dt*3.2);}
@@ -242,11 +261,11 @@ var K=(function(){
       draw();
     },
     still:function(){
-      var A={x:W*0.13,y:H*0.2},B={x:W*0.25,y:H*0.62},P1={x:W*0.36,y:-H*0.08},P2={x:W*0.6,y:H*1.02};
-      tgt={x:W*0.76,y:H*0.32};marks=[A,B];trail=[];
-      for(var i=0;i<=48;i++){var u=i/48,a=1-u;
-        trail.push({x:a*a*a*B.x+3*a*a*u*P1.x+3*a*u*u*P2.x+u*u*u*tgt.x,y:a*a*a*B.y+3*a*a*u*P1.y+3*a*u*u*P2.y+u*u*u*tgt.y});}
-      ptr.on=true;ptr.x=tgt.x-W*0.012;ptr.y=tgt.y+H*0.025;K.state='play';locked=1;draw();K.state='attract';
+      /* a saccade jump, then smooth pursuit along a transit line, with the gaze locked on */
+      var A={x:W*0.14,y:H*0.24},B={x:W*0.22,y:H*0.66},u=Math.min(W,H)*0.26;
+      var C={x:B.x+u,y:B.y-u},D={x:W*0.66,y:C.y},E={x:D.x+H*0.1,y:D.y-H*0.1};
+      tgt={x:E.x,y:E.y};marks=[A,B];stops=[];old=[];trail=[B,C,D,E];
+      ptr.on=true;ptr.x=tgt.x-W*0.01;ptr.y=tgt.y+H*0.02;K.state='play';locked=1;draw();K.state='attract';
       meter.style.transform='scaleX(.62)';
     }
   });
