@@ -798,15 +798,18 @@ fill="none" stroke="#ffffff" stroke-width="2" opacity=".85"/>
     return holder.firstChild;
   }
 
+  /* Keep the last two words together so no paragraph ends on a lone word. */
+  function tieLast(text){ return text.replace(/\s+(\S+)\s*$/,'\u00a0$1'); }
+
   function fill(id){
     var p=PROJECTS[id];
     document.getElementById('cab-title').textContent=p.title;
     document.getElementById('cab-hook').textContent=p.hook;
-    document.getElementById('cab-blurb').textContent=p.blurb;
+    document.getElementById('cab-blurb').textContent=tieLast(p.blurb);
     var words=document.getElementById('cab-words');
-    words.hidden=!p.words; words.textContent=p.words||'';
+    words.hidden=!p.words; words.textContent=p.words?tieLast(p.words):'';
     var howto=document.getElementById('cab-howto');
-    howto.hidden=!p.howto; howto.textContent=p.howto||'';
+    howto.hidden=!p.howto; howto.textContent=p.howto?tieLast(p.howto):'';
     var chips=document.getElementById('cab-chips'); chips.innerHTML='';
     if(p.game){ var c=document.createElement('span'); c.className='chip chip-play'; c.innerHTML=PLAY+'Playable demo'; chips.appendChild(c); }
     if(p.status){ var st=document.createElement('span'); st.className='chip'; st.textContent=p.status; chips.appendChild(st); }
