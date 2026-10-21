@@ -1,0 +1,9 @@
+# Raw source media stays on your machine (see media/raw/README.md)
+media/raw/*
+!media/raw/README.md
+
+# Local design-review captures
+.impeccable/review/
+.impeccable/config.local.json
+
+.DS_Store

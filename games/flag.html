@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flag! A microgame from the social media literacy game</title>
+<style>
+@font-face{font-family:"Oswald";src:url("../assets/fonts/oswald.woff2") format("woff2");font-weight:200 700;font-display:swap}
+@font-face{font-family:"Open Sans";src:url("../assets/fonts/open-sans.woff2") format("woff2");font-weight:300 800;font-display:swap}
+@font-face{font-family:"Silkscreen";src:url("../assets/fonts/silkscreen.woff2") format("woff2");font-display:swap}
+:root{--screen:#101019;--accent:#FF6B5C;--paper:#F2F2F5;--dim:#A3A3B5;--card:#1B1B27;--line:rgba(242,242,245,.1);
+  --ease-out:cubic-bezier(0.23,1,0.32,1)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--screen);color:var(--paper);overflow:hidden;
+  font-family:"Open Sans","Helvetica Neue",Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+.hud{position:fixed;left:0;right:0;top:0;height:40px;display:flex;align-items:center;gap:12px;padding:0 14px;z-index:3;background:var(--screen)}
+body.embed .hud{padding-right:68px}
+.cmd{font-family:"Oswald";font-weight:600;text-transform:uppercase;letter-spacing:.02em;font-size:clamp(14px,3.4vw,20px);color:var(--accent)}
+.timer{flex:1;height:8px;background:rgba(242,242,245,.14);border-radius:4px;overflow:hidden}
+.timer i{display:block;height:100%;width:100%;background:var(--paper);transform-origin:left;border-radius:4px}
+.count{font-family:"Silkscreen";font-size:12px;letter-spacing:.06em;color:var(--dim);white-space:nowrap}
+.feed{position:fixed;left:0;right:0;top:40px;bottom:0;overflow-y:auto;padding:10px 14px 18px;touch-action:pan-y;
+  scrollbar-width:thin;scrollbar-color:#3A3A52 transparent}
+.list{max-width:420px;margin:0 auto;display:grid;gap:9px}
+.post{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 12px 11px 12px;
+  display:grid;grid-template-columns:36px 1fr 44px;gap:10px;align-items:start;
+  opacity:0;transform:translateY(8px);transition:opacity .22s var(--ease-out),transform .22s var(--ease-out)}
+.post.in{opacity:1;transform:none}
+.av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;color:#101019}
+.who{font-weight:700;font-size:14px;line-height:1.2}
+.who small{font-weight:400;color:var(--dim);margin-left:6px}
+.kind{font-family:"Silkscreen";font-size:11px;color:var(--dim);letter-spacing:.05em;display:block;margin-top:2px}
+.txt{font-size:14.5px;line-height:1.4;margin-top:5px;overflow-wrap:anywhere}
+.link{display:block;margin-top:7px;padding:7px 9px;border-radius:9px;background:#252534;font-size:12.5px;color:#C3C3D3;overflow-wrap:anywhere}
+.flag{width:44px;height:44px;border-radius:12px;border:1.5px solid rgba(242,242,245,.24);background:transparent;color:var(--paper);
+  display:grid;place-items:center;cursor:pointer;transition:transform .12s var(--ease-out),background-color .15s ease,border-color .15s ease}
+.flag:active{transform:scale(.94)}
+.flag:focus-visible{outline:3px solid var(--paper);outline-offset:2px}
+@media (hover:hover) and (pointer:fine){.flag:hover{border-color:var(--accent)}}
+.flag svg{width:20px;height:20px}
+.post.caught .flag{background:var(--accent);border-color:var(--accent);color:#1A0806}
+.stamp{position:absolute;right:58px;top:50%;font-family:"Oswald";font-weight:600;text-transform:uppercase;letter-spacing:.02em;font-size:20px;color:var(--accent);border:3px solid var(--accent);
+  padding:2px 8px;border-radius:6px;transform:translateY(-50%) rotate(-9deg) scale(1.4);opacity:0;pointer-events:none;
+  transition:transform .16s var(--ease-out),opacity .12s ease}
+.post.caught .stamp{opacity:.95;transform:translateY(-50%) rotate(-9deg) scale(1)}
+.nope{position:absolute;right:58px;top:10px;font-family:"Silkscreen";font-size:11px;color:var(--dim);opacity:0;transition:opacity .15s ease}
+.post.safe .nope{opacity:1}
+.post.shake{animation:shake .32s ease}
+@keyframes shake{20%{transform:translateX(-5px)}50%{transform:translateX(5px)}80%{transform:translateX(-3px)}}
+.center{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;
+  pointer-events:none;z-index:4}
+.center.dim{background:rgba(16,16,25,.9)}
+.title{font-family:"Oswald";font-weight:600;text-transform:uppercase;letter-spacing:.02em;font-size:clamp(34px,10vw,72px);line-height:1;color:var(--accent)}
+.sub{font-family:"Silkscreen";font-size:clamp(11px,2.6vw,14px);letter-spacing:.06em;margin-top:12px}
+.blink{animation:blink 1.1s steps(2,start) infinite}
+@keyframes blink{to{visibility:hidden}}
+.pop{animation:pop .28s var(--ease-out) both}
+@keyframes pop{from{transform:scale(1.5);opacity:0}to{transform:scale(1);opacity:1}}
+.result{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;
+  background:rgba(16,16,25,.92);z-index:5}
+.result.on{display:flex}
+.result h2{font-family:"Oswald";font-weight:600;text-transform:uppercase;letter-spacing:.01em;font-size:clamp(24px,6.5vw,44px);margin:0;color:var(--accent);line-height:1.05}
+.result p{max-width:36ch;font-size:clamp(14px,3.2vw,16px);line-height:1.5;margin:14px 0 0}
+.again{margin-top:20px;font-family:"Oswald";font-weight:600;text-transform:uppercase;letter-spacing:.02em;font-size:15px;padding:12px 22px;border:0;border-radius:4px;background:var(--accent);color:#1A0806;
+  cursor:pointer;transition:transform .12s var(--ease-out)}
+.again:active{transform:scale(.97)}
+.again:focus-visible{outline:3px solid var(--paper);outline-offset:3px}
+body.micro .again{display:none}
+@media (prefers-reduced-motion:reduce){.blink,.pop,.post.shake{animation:none}.post{transition:opacity .2s ease;transform:none}}
+</style>
+</head>
+<body>
+<div class="hud"><span class="cmd" aria-hidden="true">FLAG!</span><span class="timer" aria-hidden="true"><i id="timer"></i></span>
+  <span class="count" id="count" aria-live="polite">TRAPS 0/2</span></div>
+<div class="feed" id="feed"><div class="list" id="list"></div></div>
+<div class="center dim" id="center"><div class="title" id="bigTitle">FLAG!</div><div class="sub blink" id="bigSub">TAP TO PLAY</div></div>
+<div class="result" id="result" role="status" aria-live="polite">
+  <h2 id="resTitle"></h2><p id="resNote"></p>
+  <button class="again" id="again" type="button">Play again</button>
+</div>
+<script>
+(function(){
+  var params=new URLSearchParams(location.search);
+  var MICRO=params.has('micro'), AUTO=params.has('auto')||MICRO;
+  var DURATION=MICRO?6:12;
+  if(MICRO)document.body.classList.add('micro');
+  if(params.has('embed'))document.body.classList.add('embed');
+
+  var FLAG='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M5 18V2.5"/><path d="M5 3h10l-2.4 3.6L15 10H5"/></svg>';
+  var POSTS=[
+    {who:'jaden.k',t:'2m',kind:'POST',txt:'practice moved to 4 tomorrow, coach said bring water',c:'#7FD4A0'},
+    {who:'prize.drop.official',t:'5m',kind:'SPONSORED',txt:'YOU WON 5,000 COINS! Log in with your password to claim before midnight.',link:'coinz-prize-claim.co/login',trap:true,c:'#FFB020'},
+    {who:'maya.r',t:'9m',kind:'POST',txt:'who is going to the game friday??',c:'#A07BFF'},
+    {who:'ellie_m',t:'12m',kind:'MESSAGE FROM A FRIEND',txt:'omg is this you in this video??',link:'vid-share.watch/x9q2',trap:true,c:'#4DD6FF'},
+    {who:'lincoln_band',t:'1h',kind:'POST',txt:'Spring concert tickets are at the front office this week.',c:'#FF5EC4'}
+  ];
+  var MICRO_POSTS=[POSTS[0],POSTS[3],POSTS[4]];
+  var listEl=document.getElementById('list'), countEl=document.getElementById('count');
+  var state='attract', timeLeft=DURATION, last=0, caught=0, total=0;
+
+  function initials(n){return n.replace(/[^a-z]/gi,'').slice(0,2).toUpperCase();}
+  function build(){
+    var src=MICRO?MICRO_POSTS:POSTS;
+    total=src.filter(function(p){return p.trap;}).length; caught=0;
+    countEl.textContent='TRAPS 0/'+total;
+    listEl.innerHTML='';
+    src.forEach(function(p,i){
+      var d=document.createElement('article');d.className='post';
+      d.innerHTML='<div class="av" style="background:'+p.c+'">'+initials(p.who)+'</div>'+
+        '<div><div class="who">'+p.who+'<small>'+p.t+'</small></div><span class="kind">'+p.kind+'</span>'+
+        '<div class="txt"></div>'+(p.link?'<span class="link"></span>':'')+'</div>'+
+        '<button class="flag" type="button" aria-label="Flag this '+p.kind.toLowerCase()+' from '+p.who+' as suspicious">'+FLAG+'</button>'+
+        '<span class="stamp" aria-hidden="true">PHISHING</span><span class="nope" aria-hidden="true">LOOKS SAFE</span>';
+      d.querySelector('.txt').textContent=p.txt;
+      if(p.link)d.querySelector('.link').textContent=p.link;
+      d._p=p;
+      d.querySelector('.flag').addEventListener('click',function(){flag(d);});
+      listEl.appendChild(d);
+      setTimeout(function(){d.classList.add('in');},40+i*60);
+    });
+  }
+  function flag(d){
+    if(state==='attract'){start();return;}
+    if(state!=='play'||d.classList.contains('caught'))return;
+    if(d._p.trap){
+      d.classList.add('caught');caught++;countEl.textContent='TRAPS '+caught+'/'+total;
+      if(caught>=total)setTimeout(function(){finish(true);},420);
+    }else{
+      d.classList.remove('shake');void d.offsetWidth;d.classList.add('shake','safe');
+      setTimeout(function(){d.classList.remove('safe');},900);
+    }
+  }
+  var timerEl=document.getElementById('timer'), center=document.getElementById('center'), bigTitle=document.getElementById('bigTitle'), bigSub=document.getElementById('bigSub');
+  var resEl=document.getElementById('result');
+
+  function start(){
+    if(state==='play'||state==='cmd')return;
+    resEl.classList.remove('on');build();timeLeft=DURATION;timerEl.style.transform='scaleX(1)';
+    state='cmd';center.style.display='flex';center.classList.remove('dim');
+    bigTitle.textContent='FLAG!';bigTitle.classList.remove('pop');void bigTitle.offsetWidth;bigTitle.classList.add('pop');
+    bigSub.textContent='CATCH THE PHISHING';bigSub.classList.remove('blink');
+    setTimeout(function(){state='play';center.style.display='none';},MICRO?550:750);
+  }
+  function finish(ok){
+    if(state==='done')return;state='done';
+    document.getElementById('resTitle').textContent=ok?'ALL CAUGHT':'TIME!';
+    document.getElementById('resNote').textContent=ok
+      ?'The lab’s social media literacy work teaches teenagers the real outcomes of social media, from phishing to cyberbullying.'
+      :'Look again at posts that ask for a password and at links that arrive in a friend’s message.';
+    resEl.classList.add('on');
+    if(!MICRO)document.getElementById('again').focus({preventScroll:true});
+    try{if(window.parent!==window)window.parent.postMessage({source:'tamu-microgame',game:'flag',type:'result',win:ok},'*');}catch(e){}
+  }
+  document.getElementById('again').addEventListener('click',function(){state='attract';start();});
+  document.getElementById('feed').addEventListener('click',function(e){if(state==='attract'&&!e.target.closest('.flag'))start();});
+  center.addEventListener('click',function(){if(state==='attract')start();});
+  window.addEventListener('keydown',function(e){if(state==='attract'&&(e.key==='Enter'||e.key===' ')){e.preventDefault();start();}});
+  window.addEventListener('message',function(e){if(e.data&&e.data.source==='tamu-arcade'&&e.data.type==='start')start();});
+  window.addEventListener('keydown',function(e){if(e.key==='Escape'){try{if(window.parent!==window)window.parent.postMessage({source:'tamu-microgame',type:'escape'},'*');}catch(x){}}});
+
+  function loop(ts){
+    var dt=Math.min((ts-(last||ts))/1000,0.05);last=ts;
+    if(state==='play'){timeLeft-=dt;timerEl.style.transform='scaleX('+Math.max(0,timeLeft/DURATION)+')';if(timeLeft<=0)finish(false);}
+    requestAnimationFrame(loop);
+  }
+  build();
+  if(AUTO){start();}
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# GitHub Pages build settings.
+# Keep design and product notes in the repository without publishing them.
+exclude:
+  - PRODUCT.md
+  - DESIGN.md
+  - README.md
+  - .impeccable
+  - media/raw
