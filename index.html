@@ -125,6 +125,7 @@
     font-family:var(--display);font-weight:600;font-size:1.0625rem;color:var(--maroon);
     letter-spacing:.1em;text-transform:uppercase;line-height:1.3;
   }
+  .people .section-h,.collabs .section-h{font-size:1.5rem;letter-spacing:.06em}
 
   /* ---------- project images ---------- */
   .thumb{position:relative;display:block;aspect-ratio:16/9;background:#ece9e1;overflow:hidden}
@@ -506,7 +507,6 @@
           <h2 class="card-title"><button class="open" type="button" data-open="social-media-literacy" aria-haspopup="dialog">Social Media Literacy</button></h2>
           <p>Recognizing manipulation in the feed</p>
           <div class="card-foot">
-            <div class="chips"><span class="chip">Collaborative project</span></div>
             <span class="cue">Play the demo</span>
           </div>
         </div>
@@ -623,7 +623,6 @@
     'social-media-literacy':{title:'Social Media Literacy',hook:'Recognizing manipulation in the feed',
       blurb:'A game about misinformation and media literacy: players learn to recognize manipulation techniques by encountering them in play.',
       words:'Teaching teenagers the real outcomes of social media, from phishing to cyberbullying, and how to build healthy habits of use.',
-      collab:'unnamed',
       game:'games/flag.html',
       howto:'Two posts in the feed are phishing. Flag both before time runs out.'},
     'math-education':{title:'Math Education Game',hook:'Game-based math learning',
@@ -716,8 +715,6 @@
     if(p.collab && p.collab.url){
       var a=document.createElement('a'); a.className='chip'; a.href=p.collab.url;
       a.textContent='With '+p.collab.name; chips.appendChild(a);
-    }else if(p.collab==='unnamed'){
-      var s=document.createElement('span'); s.className='chip'; s.textContent='Collaborative project'; chips.appendChild(s);
     }
     dialog.classList.toggle('is-game',!!p.game);
     return p;
