@@ -255,7 +255,8 @@ var K=(function(){
     frame:function(dt,s){
       if(s==='attract'&&!K.reduce){attractT+=dt;if(attractT>0.9){attractT=0;var c=chord(),semi=c.tones[attractI%4];placeMarker(semi);flashKey(semi,'down');attractI++;}}
     },
-    still:function(){ti=3;showChord();}
+    /* ?still shows the first chord nearly done; ?still&dim=2 shows the next dimension under way */
+    still:function(){if(new URLSearchParams(location.search).get('dim')==='2'){ci=1;ti=2;}else{ti=3;}showChord();}
   });
   if(K.TEST)window.__G={get state(){return K.state;},nextKey:function(){var c=chord(),s=c.tones[ti];for(var k in keyOf)if(keyOf[k]===s)return k;return null;}};
 })();

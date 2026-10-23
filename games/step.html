@@ -60,41 +60,37 @@ body.still .hud,body.still .center,body.still .result{display:none!important}
   @keyframes bar{50%{transform:scaleX(.55)}}
 }
 #wall{position:fixed;inset:0;overflow:hidden}
-#photo{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:0 0;overflow:hidden;background:var(--paper)}
-#scene{display:block;width:100%;height:100%;filter:grayscale(1) contrast(.92) brightness(.95);transition:filter .6s var(--ease-out)}
-body.inside #scene,body.still #scene{filter:none}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+body.inside #gl{cursor:grab}
+body.inside.looking #gl{cursor:grabbing}
 #frame{position:absolute;box-sizing:border-box;border:10px solid #fff;outline:3px solid var(--ink);pointer-events:none;
-  box-shadow:0 12px 28px rgba(36,38,43,.16);transition:opacity .2s var(--ease-out)}
-body.inside #frame{opacity:0}
+  box-shadow:0 12px 28px rgba(36,38,43,.16);transition:opacity .25s var(--ease-out)}
 #enter{position:absolute;border:0;background:transparent;cursor:pointer;padding:0}
 #enter:focus-visible{outline:3px solid var(--ink);outline-offset:16px}
 body.inside #enter{display:none}
-.spot{cursor:pointer}
+.spot{position:absolute;left:0;top:0;width:48px;height:48px;margin:-24px 0 0 -24px;padding:0;border:0;border-radius:50%;
+  background:transparent;cursor:pointer;display:none}
+body.inside .spot.shown{display:block}
+.spot::after{content:"";position:absolute;inset:13px;box-sizing:border-box;border-radius:50%;background:#fff;border:4px solid var(--ink)}
+.spot::before{content:"";position:absolute;inset:5px;box-sizing:border-box;border-radius:50%;border:3px solid var(--accent)}
+.spot.found::after{background:var(--accent)}
+.spot.found::before{display:none}
 .spot:focus{outline:none}
-.spot:focus-visible .core{stroke-width:7}
-.spot .ring{fill:none;stroke:var(--ink);stroke-width:3;opacity:0;transform-box:fill-box;transform-origin:center}
-body.inside .spot:not(.found) .ring{opacity:1}
-.spot.found .core{fill:var(--accent)}
+.spot:focus-visible::after{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--ink)}
+body.nogl #wall{background:#e3e0d6}
 @media (prefers-reduced-motion:no-preference){
-  body.inside .spot:not(.found) .ring{animation:ring 1.5s ease-out infinite}
-  @keyframes ring{from{transform:scale(.8);opacity:.6}to{transform:scale(1.7);opacity:0}}
+  .spot:not(.found)::before{animation:ring 1.5s ease-out infinite}
+  @keyframes ring{from{transform:scale(.7);opacity:.9}to{transform:scale(1.35);opacity:0}}
 }
-@media (prefers-reduced-motion:reduce){#scene{transition:none}}
 </style>
 </head>
 <body class="attract">
 <div id="stage">
 <div id="wall">
+  <canvas id="gl" aria-hidden="true"></canvas>
   <div id="frame" aria-hidden="true"></div>
-  <div id="photo">
-    <svg id="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" role="img" aria-label="A personal photograph that opens into a map of three remembered places.">
-      <rect x="-60" y="-60" width="520" height="420" fill="#eeedea"/>
-      <path d="M-60 132 H112 L196 216 H460" fill="none" stroke="#c6dbe3" stroke-width="34" stroke-linejoin="round"/>
-      <path id="mline" d="" fill="none" stroke="#f2b21c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-      <g id="spots"></g>
-    </svg>
-  </div>
   <button id="enter" type="button" aria-label="Step into the photograph"></button>
+  <div id="spots"></div>
 </div>
 </div>
 <div class="hud" aria-hidden="true">
@@ -175,90 +171,311 @@ var K=(function(){
 </script>
 <script>
 (function(){
-  var NS='http://www.w3.org/2000/svg';
-  function el(tag,attrs,parent){var n=document.createElementNS(NS,tag);for(var k in attrs)n.setAttribute(k,attrs[k]);if(parent)parent.appendChild(n);return n;}
-  var photo=document.getElementById('photo'),frame=document.getElementById('frame'),enter=document.getElementById('enter'),
-      spotsG=document.getElementById('spots'),mline=document.getElementById('mline'),body=document.body;
-  /* three moments in the photograph, drawn as Mini Metro stations */
-  var SPOTS=[{x:86,y:188,shape:'circle',label:'the circle'},{x:196,y:98,shape:'triangle',label:'the triangle'},{x:318,y:150,shape:'square',label:'the square'}];
-  var inside=false,found=[],spotEls=[],anim=null,W=0,H=0,titleBottom=0;
-  function framed(){
-    W=window.innerWidth;H=window.innerHeight;
-    var sub=document.getElementById('bigSub').getBoundingClientRect(),top=(titleBottom||sub.bottom)+18;titleBottom=titleBottom||sub.bottom;
-    /* leave room for the 13px mat and outline so the frame never touches the bottom edge */
-    var room=H-top-46,s=Math.max(0.3,Math.min(W/H>1.25?0.5:0.6,room/H)),w=W*s,h=H*s,x=(W-w)/2,y=top+16+Math.max(0,(room-h)/2);
-    return {x:x,y:y,w:w,h:h,s:s};
+  /* A photograph of a house that opens into the 3D place it shows.
+     Everything is drawn from simple geometry: boxes, a gable roof, low-poly trees. */
+  var cv=document.getElementById('gl'),frame=document.getElementById('frame'),enter=document.getElementById('enter'),
+      spotsBox=document.getElementById('spots'),body=document.body;
+  var gl=null;
+  try{gl=cv.getContext('webgl',{antialias:true,stencil:true,preserveDrawingBuffer:true,alpha:false});}catch(e){gl=null;}
+  if(!gl)body.classList.add('nogl');
+
+  /* ---------- palette ---------- */
+  function hx(h){return [parseInt(h.substr(1,2),16)/255,parseInt(h.substr(3,2),16)/255,parseInt(h.substr(5,2),16)/255];}
+  var C={sky:'#eeedea',grass:'#bdcaa2',path:'#e5e1d6',street:'#d2d0c9',wall:'#f3efe6',trim:'#fbfaf6',roof:'#74302e',
+    porch:'#d8d3c6',step:'#e3ded1',glass:'#7f96a6',door:'#7a4f33',wood:'#8e5b33',chain:'#9a9a94',chimney:'#a3685b',
+    trunk:'#7a6654',leaf:'#89a273',leaf2:'#9bb083',bush:'#92aa7c',mail:'#3d5a6c',flag:'#f2b21c',
+    wallL:'#ebe6dc',roofL:'#8b939b',wallR:'#e8e0d3',roofR:'#9d6b5f'};
+
+  /* ---------- geometry ---------- */
+  var POS=[],NOR=[],COL=[],SH=[];
+  function face(vs,n,c,cast){
+    var idx=vs.length===4?[0,1,2,0,2,3]:[0,1,2];
+    for(var k=0;k<idx.length;k++){var v=vs[idx[k]];POS.push(v[0],v[1],v[2]);NOR.push(n[0],n[1],n[2]);COL.push(c[0],c[1],c[2]);if(cast)SH.push(v[0],v[1],v[2]);}
   }
-  function place(){
-    var r=framed();
-    if(!inside)photo.style.transform='translate('+r.x+'px,'+r.y+'px) scale('+r.s+')';
-    frame.style.left=(r.x-10)+'px';frame.style.top=(r.y-10)+'px';frame.style.width=(r.w+20)+'px';frame.style.height=(r.h+20)+'px';
-    enter.style.left=r.x+'px';enter.style.top=r.y+'px';enter.style.width=r.w+'px';enter.style.height=r.h+'px';
+  function box(x0,y0,z0,x1,y1,z1,h,cast,under){
+    var c=hx(h);
+    face([[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]],[0,1,0],c,cast);
+    face([[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]],[0,0,1],c,cast);
+    face([[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0]],[0,0,-1],c,cast);
+    face([[x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]],[-1,0,0],c,cast);
+    face([[x1,y0,z0],[x1,y0,z1],[x1,y1,z1],[x1,y1,z0]],[1,0,0],c,cast);
+    if(under)face([[x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]],[0,-1,0],c,false);
   }
-  window.addEventListener('resize',function(){titleBottom=0;place();});
-  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(!inside){titleBottom=0;place();}});
-  function shape(kind,x,y,r,attrs,parent){
-    if(kind==='circle')return el('circle',Object.assign({cx:x,cy:y,r:r},attrs),parent);
-    if(kind==='square')return el('rect',Object.assign({x:x-r*0.9,y:y-r*0.9,width:r*1.8,height:r*1.8},attrs),parent);
-    var h=r*1.15;return el('path',Object.assign({d:'M'+x+' '+(y-h)+' L'+(x+h*1.05)+' '+(y+h*0.75)+' L'+(x-h*1.05)+' '+(y+h*0.75)+' Z'},attrs),parent);
+  function flat(x0,z0,x1,z1,y,h){face([[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]],[0,1,0],hx(h),false);}
+  function norm(v){var l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/l];}
+  /* gable roof with its ridge along x */
+  function gable(xl,xr,wl,wr,zb,zf,e,r,roofH,wallH){
+    var zm=(zb+zf)/2,run=(zf-zb)/2,rise=r-e,rc=hx(roofH),wc=hx(wallH);
+    face([[xl,e,zf],[xr,e,zf],[xr,r,zm],[xl,r,zm]],norm([0,run,rise]),rc,true);
+    face([[xl,e,zb],[xr,e,zb],[xr,r,zm],[xl,r,zm]],norm([0,run,-rise]),rc,true);
+    face([[wl,e,zf],[wl,e,zb],[wl,r,zm]],[-1,0,0],wc,true);
+    face([[wr,e,zf],[wr,e,zb],[wr,r,zm]],[1,0,0],wc,true);
   }
-  SPOTS.forEach(function(s,i){
-    var g=el('g',{'class':'spot',tabindex:'-1',role:'button','aria-label':'Remember '+s.label},spotsG);
-    el('circle',{'class':'ring',cx:s.x,cy:s.y,r:20},g);
-    shape(s.shape,s.x,s.y,13,{'class':'core',fill:'#fff',stroke:'#24262b','stroke-width':5,'stroke-linejoin':'round'},g);
-    el('circle',{cx:s.x,cy:s.y,r:26,fill:'transparent'},g);
-    g._i=i;spotEls.push(g);
-    g.addEventListener('click',function(){pick(g);});
-    g.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(g);}});
+  /* low-poly canopy: a jittered, once-subdivided icosahedron */
+  function canopy(cx,cy,cz,rad,sy,h,seed){
+    var t=(1+Math.sqrt(5))/2,V=[[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],[t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]].map(norm);
+    var F=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+    var cache={};
+    function mid(a,b){var k=a<b?a+'_'+b:b+'_'+a;if(cache[k]===undefined){V.push(norm([(V[a][0]+V[b][0])/2,(V[a][1]+V[b][1])/2,(V[a][2]+V[b][2])/2]));cache[k]=V.length-1;}return cache[k];}
+    var F2=[];F.forEach(function(f){var a=mid(f[0],f[1]),b=mid(f[1],f[2]),c=mid(f[2],f[0]);F2.push([f[0],a,c],[f[1],b,a],[f[2],c,b],[a,b,c]);});
+    var s=seed;function rnd(){s=(s*16807)%2147483647;return s/2147483647;}
+    var P=V.map(function(v){var k=rad*(0.9+rnd()*0.18);return [cx+v[0]*k,cy+v[1]*k*sy,cz+v[2]*k];});
+    var base=hx(h);
+    F2.forEach(function(f){
+      var a=P[f[0]],b=P[f[1]],c=P[f[2]];
+      var n=norm([(b[1]-a[1])*(c[2]-a[2])-(b[2]-a[2])*(c[1]-a[1]),(b[2]-a[2])*(c[0]-a[0])-(b[0]-a[0])*(c[2]-a[2]),(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])]);
+      var m=[(a[0]+b[0]+c[0])/3-cx,(a[1]+b[1]+c[1])/3-cy,(a[2]+b[2]+c[2])/3-cz];
+      if(n[0]*m[0]+n[1]*m[1]+n[2]*m[2]<0)n=[-n[0],-n[1],-n[2]];
+      var k=0.95+rnd()*0.1;face([a,b,c],n,[base[0]*k,base[1]*k,base[2]*k],true);
+    });
+  }
+  function house(){
+    /* ground, street, walk */
+    flat(-90,-90,90,70,0,C.grass);
+    flat(-90,12.0,90,19.5,0.006,C.street);
+    flat(-90,10.6,90,12.0,0.010,C.path);
+    flat(-0.8,3.3,0.8,10.6,0.012,C.path);
+    /* house body and roof */
+    box(-4.5,0,-8,4.5,3.8,0,C.wall,true);
+    gable(-4.8,4.8,-4.5,4.5,-8.35,0.35,3.8,6.0,C.roof,C.wall);
+    box(-4.8,3.72,0.28,4.8,3.86,0.42,C.trim,false);
+    box(2.4,3.6,-5.1,3.2,6.75,-4.3,C.chimney,true);
+    /* windows and door */
+    [-2.6,2.6].forEach(function(x){
+      box(x-0.88,1.12,0,x+0.88,2.98,0.05,C.trim,false);
+      box(x-0.74,1.26,0,x+0.74,2.84,0.08,C.glass,false);
+      box(x-0.035,1.26,0,x+0.035,2.84,0.1,C.trim,false);
+      box(x-0.74,2.02,0,x+0.74,2.09,0.1,C.trim,false);
+    });
+    box(-0.7,0.5,0,0.7,2.92,0.05,C.trim,false);
+    box(-0.56,0.5,0,0.56,2.78,0.08,C.door,false);
+    /* porch: floor, steps, posts, rails, roof */
+    box(-4.6,0,0,4.6,0.5,2.7,C.porch,true);
+    box(-1.05,0,2.7,1.05,0.34,3.0,C.step,true);
+    box(-1.05,0,3.0,1.05,0.17,3.3,C.step,true);
+    [-4.35,-1.25,1.25,4.35].forEach(function(x){box(x-0.1,0.5,2.38,x+0.1,3.42,2.58,C.trim,true);});
+    [[-4.25,-1.35],[1.35,4.25]].forEach(function(r){
+      box(r[0],1.24,2.43,r[1],1.32,2.53,C.trim,true);
+      box(r[0],0.6,2.43,r[1],0.66,2.53,C.trim,false);
+      for(var x=r[0]+0.2;x<r[1]-0.1;x+=0.32)box(x-0.025,0.66,2.455,x+0.025,1.24,2.505,C.trim,true);
+    });
+    box(-4.8,3.42,-0.05,4.8,3.6,2.85,C.roof,true,true);
+    box(-4.8,3.34,2.78,4.8,3.44,2.86,C.trim,false);
+    /* porch swing */
+    box(-3.7,0.95,0.6,-2.1,1.05,1.12,C.wood,true,true);
+    box(-3.7,1.05,0.55,-2.1,1.55,0.65,C.wood,true);
+    [-3.62,-2.18].forEach(function(x){box(x-0.015,1.05,0.84,x+0.015,3.42,0.87,C.chain,false);});
+    /* plants */
+    canopy(-3.1,0.42,3.25,0.62,0.75,C.bush,7);
+    canopy(3.2,0.42,3.25,0.6,0.75,C.bush,11);
+    box(6.22,0,1.22,6.58,2.7,1.58,C.trunk,true);
+    canopy(6.4,3.95,1.4,2.05,0.92,C.leaf,23);
+    box(-7.75,0,-4.15,-7.45,2.4,-3.85,C.trunk,true);
+    canopy(-7.6,3.5,-4.0,1.75,0.95,C.leaf2,41);
+    /* mailbox by the sidewalk */
+    box(2.55,0,9.95,2.65,1.06,10.05,C.trim,true);
+    box(2.42,1.06,9.7,2.78,1.34,10.3,C.mail,true);
+    box(2.78,1.18,9.96,2.82,1.46,10.04,C.flag,false);
+    /* neighbours, so the place goes on past the edges of the photo */
+    box(-24.5,0,-7,-16.5,3.4,0,C.wallL,true);
+    gable(-24.8,-16.2,-24.5,-16.5,-7.3,0.3,3.4,5.3,C.roofL,C.wallL);
+    [-22.2,-18.8].forEach(function(x){box(x-0.7,1.0,0,x+0.7,2.5,0.07,C.glass,false);});
+    box(-16.5,1.0,-5.2,-16.43,2.5,-3.8,C.glass,false);
+    box(16.5,0,-7.5,24.5,3.6,-0.5,C.wallR,true);
+    gable(16.2,24.8,16.5,24.5,-7.8,-0.2,3.6,5.6,C.roofR,C.wallR);
+    [18.8,22.2].forEach(function(x){box(x-0.7,1.0,-0.5,x+0.7,2.5,-0.43,C.glass,false);});
+    box(16.43,1.0,-5.6,16.5,2.5,-4.2,C.glass,false);
+    canopy(-12.5,3.3,2.5,1.7,0.95,C.leaf2,59);box(-12.65,0,2.35,-12.35,2.2,2.65,C.trunk,true);
+    canopy(13.0,3.6,-1.0,1.9,0.95,C.leaf,73);box(12.85,0,-1.15,13.15,2.5,-0.85,C.trunk,true);
+  }
+  house();
+
+  /* ---------- GL ---------- */
+  var prog,buf={},nVerts=POS.length/3,nShadow=SH.length/3,loc={};
+  var L=norm([-0.45,0.78,0.56]);
+  if(gl){
+    var vs='attribute vec3 aP;attribute vec3 aN;attribute vec3 aC;uniform mat4 uVP;uniform vec3 uL;uniform mediump float uSh;'+
+      'varying vec3 vC;varying vec3 vW;void main(){vec3 p=aP;if(uSh>0.5){p=vec3(p.x-p.y*uL.x/uL.y,0.016,p.z-p.y*uL.z/uL.y);}'+
+      'float d=max(dot(aN,uL),0.0);vC=aC*(0.64+0.42*d);vW=p;gl_Position=uVP*vec4(p,1.0);}';
+    var fs='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n'+
+      'varying vec3 vC;varying vec3 vW;uniform vec3 uEye;uniform vec3 uFog;uniform vec2 uFogR;uniform float uAge;uniform mediump float uSh;uniform float uShA;'+
+      'void main(){float f=clamp((distance(vW,uEye)-uFogR.x)/(uFogR.y-uFogR.x),0.0,1.0);'+
+      'if(uSh>0.5){gl_FragColor=vec4(0.141,0.149,0.169,uShA*(1.0-f));return;}'+
+      'vec3 c=mix(vC,uFog,f);float l=dot(c,vec3(0.299,0.587,0.114));vec3 a=vec3(l*1.07,l*1.0,l*0.86)*0.9+0.07;'+
+      'gl_FragColor=vec4(mix(c,a,uAge),1.0);}';
+    function sh(type,src){var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;}
+    prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,vs));gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog,gl.LINK_STATUS)){gl=null;body.classList.add('nogl');}
+  }
+  if(gl){
+    gl.useProgram(prog);
+    ['aP','aN','aC'].forEach(function(n){loc[n]=gl.getAttribLocation(prog,n);});
+    ['uVP','uL','uSh','uEye','uFog','uFogR','uAge','uShA'].forEach(function(n){loc[n]=gl.getUniformLocation(prog,n);});
+    function vbo(arr){var b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(arr),gl.STATIC_DRAW);return b;}
+    buf.p=vbo(POS);buf.n=vbo(NOR);buf.c=vbo(COL);buf.s=vbo(SH);
+    gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
+    var sky=hx(C.sky);gl.clearColor(sky[0],sky[1],sky[2],1);
+    gl.uniform3fv(loc.uL,L);gl.uniform3fv(loc.uFog,sky);
+  }
+
+  /* ---------- camera math ---------- */
+  function persp(fovy,aspect,near,far){var f=1/Math.tan(fovy/2),nf=1/(near-far);return [f/aspect,0,0,0,0,f,0,0,0,0,(far+near)*nf,-1,0,0,2*far*near*nf,0];}
+  function lookAt(e,c){
+    var zx=e[0]-c[0],zy=e[1]-c[1],zz=e[2]-c[2],l=Math.hypot(zx,zy,zz);zx/=l;zy/=l;zz/=l;
+    var xx=zz,xy=0,xz=-zx;l=Math.hypot(xx,xy,xz);xx/=l;xz/=l;
+    var yx=zy*xz-zz*xy,yy=zz*xx-zx*xz,yz=zx*xy-zy*xx;
+    return [xx,yx,zx,0,xy,yy,zy,0,xz,yz,zz,0,-(xx*e[0]+xy*e[1]+xz*e[2]),-(yx*e[0]+yy*e[1]+yz*e[2]),-(zx*e[0]+zy*e[1]+zz*e[2]),1];
+  }
+  function mul(a,b){var o=new Array(16);for(var i=0;i<4;i++)for(var j=0;j<4;j++){var s=0;for(var k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];o[i*4+j]=s;}return o;}
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function lerp3(a,b,t){return [lerp(a[0],b[0],t),lerp(a[1],b[1],t),lerp(a[2],b[2],t)];}
+  function ease(t){return t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
+  var DEG=Math.PI/180;
+  /* the photograph: taken from across the street with a long lens; inside: standing on the front walk */
+  var PIC={eye:[1.1,1.7,21.5],at:[1.1,2.55,0],fov:24*DEG};
+  var IN={eye:[0.7,1.66,10.4],at:[0.6,2.5,0]};
+
+  /* ---------- layout ---------- */
+  var W=0,H=0,DPR=1,rect={x:0,y:0,w:1,h:1},titleBottom=0,inside=false,t=0,anim=null,yaw=0,pitch=0,tyaw=0,tpitch=0,drag=null,VP=null;
+  var SPOTS=[{p:[0,1.75,0.14],label:'the front door'},{p:[-2.9,1.3,0.9],label:'the porch swing'},{p:[5.0,3.0,2.6],label:'the tree'}];
+  var spotEls=SPOTS.map(function(s,i){
+    var b=document.createElement('button');b.type='button';b.className='spot';b.setAttribute('aria-label','Remember '+s.label);b.tabIndex=-1;
+    b.addEventListener('click',function(){pick(i);});spotsBox.appendChild(b);return b;
   });
-  /* transit-map routing: a 45 degree run, then a straight run */
-  function route(a,b){
-    var dx=b.x-a.x,dy=b.y-a.y,d=Math.min(Math.abs(dx),Math.abs(dy)),mx=a.x+Math.sign(dx)*d,my=a.y+Math.sign(dy)*d;
-    return ' L'+mx+' '+my+' L'+b.x+' '+b.y;
+  var found=[];
+  var stillTop=0;
+  function framed(){
+    var sub=document.getElementById('bigSub').getBoundingClientRect(),top=(stillTop||titleBottom||sub.bottom)+18;titleBottom=titleBottom||sub.bottom;
+    var room=H-top-46,s=Math.max(0.3,Math.min(W/H>1.25?0.5:0.6,room/H)),w=W*s,h=H*s,x=(W-w)/2,y=top+16+Math.max(0,(room-h)/2);
+    return {x:x,y:y,w:w,h:h};
   }
-  function drawLine(){
-    if(found.length<2){mline.setAttribute('d','');return;}
-    var p=SPOTS[found[0]],d='M'+p.x+' '+p.y;
-    for(var i=1;i<found.length;i++){d+=route(SPOTS[found[i-1]],SPOTS[found[i]]);}
-    mline.setAttribute('d',d);
+  function resize(){
+    W=window.innerWidth;H=window.innerHeight;DPR=Math.min(window.devicePixelRatio||1,2);
+    cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
+    rect=framed();
+    frame.style.left=(rect.x-10)+'px';frame.style.top=(rect.y-10)+'px';frame.style.width=(rect.w+20)+'px';frame.style.height=(rect.h+20)+'px';
+    enter.style.left=rect.x+'px';enter.style.top=rect.y+'px';enter.style.width=rect.w+'px';enter.style.height=rect.h+'px';
+    draw();
   }
-  function pick(g){
-    if(K.state!=='play'||!inside||g.classList.contains('found'))return;
-    g.classList.add('found');found.push(g._i);drawLine();K.setCount(found.length+'/3');
+  window.addEventListener('resize',function(){titleBottom=0;resize();});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){titleBottom=0;resize();});
+
+  /* ---------- render ---------- */
+  function insideFov(){var a=W/H,h=2*Math.atan(Math.tan(47*DEG)/a);return Math.min(82*DEG,Math.max(58*DEG,h));}
+  function view(){
+    var k=ease(t),a=W/H;
+    var eye=lerp3(PIC.eye,IN.eye,k),at=lerp3(PIC.at,IN.at,k);
+    /* looking around turns the head once inside */
+    var dx=at[0]-eye[0],dz=at[2]-eye[2],dy=at[1]-eye[1],cy=Math.cos(yaw*k),sy=Math.sin(yaw*k);
+    at=[eye[0]+dx*cy-dz*sy,eye[1]+dy+pitch*k*6,eye[2]+dx*sy+dz*cy];
+    var fov=lerp(PIC.fov,insideFov(),k);
+    /* the photo's view is drawn into the frame rectangle, then grows to the whole screen */
+    var rx=lerp(rect.x,0,k),ry=lerp(rect.y,0,k),rw=lerp(rect.w,W,k),rh=lerp(rect.h,H,k);
+    var sx=rw/W,syy=rh/H,tx=(rx+rw/2)/W*2-1,ty=1-(ry+rh/2)/H*2;
+    var M=[sx,0,0,0,0,syy,0,0,0,0,1,0,tx,ty,0,1];
+    return {VP:mul(M,mul(persp(fov,a,0.1,200),lookAt(eye,at))),eye:eye,clip:[ry,W-rx-rw,H-ry-rh,rx],k:k};
+  }
+  function draw(){
+    var v=view();VP=v.VP;
+    cv.style.clipPath='inset('+v.clip[0].toFixed(1)+'px '+v.clip[1].toFixed(1)+'px '+v.clip[2].toFixed(1)+'px '+v.clip[3].toFixed(1)+'px)';
+    if(gl){
+      gl.viewport(0,0,cv.width,cv.height);
+      gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);
+      gl.uniformMatrix4fv(loc.uVP,false,new Float32Array(VP));
+      gl.uniform3fv(loc.uEye,v.eye);
+      gl.uniform2f(loc.uFogR,lerp(34,15,v.k),lerp(80,48,v.k));
+      gl.uniform1f(loc.uAge,1-v.k);
+      /* scene */
+      gl.uniform1f(loc.uSh,0);
+      gl.bindBuffer(gl.ARRAY_BUFFER,buf.p);gl.enableVertexAttribArray(loc.aP);gl.vertexAttribPointer(loc.aP,3,gl.FLOAT,false,0,0);
+      gl.bindBuffer(gl.ARRAY_BUFFER,buf.n);gl.enableVertexAttribArray(loc.aN);gl.vertexAttribPointer(loc.aN,3,gl.FLOAT,false,0,0);
+      gl.bindBuffer(gl.ARRAY_BUFFER,buf.c);gl.enableVertexAttribArray(loc.aC);gl.vertexAttribPointer(loc.aC,3,gl.FLOAT,false,0,0);
+      gl.drawArrays(gl.TRIANGLES,0,nVerts);
+      /* soft sun shadows, each pixel darkened once */
+      gl.uniform1f(loc.uSh,1);gl.uniform1f(loc.uShA,0.15);
+      gl.bindBuffer(gl.ARRAY_BUFFER,buf.s);gl.vertexAttribPointer(loc.aP,3,gl.FLOAT,false,0,0);
+      gl.bindBuffer(gl.ARRAY_BUFFER,buf.p);gl.vertexAttribPointer(loc.aN,3,gl.FLOAT,false,0,0);gl.vertexAttribPointer(loc.aC,3,gl.FLOAT,false,0,0);
+      gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+      gl.enable(gl.STENCIL_TEST);gl.stencilFunc(gl.EQUAL,0,0xff);gl.stencilOp(gl.KEEP,gl.KEEP,gl.INCR);
+      gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(-2,-2);
+      gl.drawArrays(gl.TRIANGLES,0,nShadow);
+      gl.disable(gl.POLYGON_OFFSET_FILL);gl.disable(gl.STENCIL_TEST);gl.depthMask(true);gl.disable(gl.BLEND);
+    }
+    placeSpots();
+  }
+  function project(p){
+    var m=VP,x=m[0]*p[0]+m[4]*p[1]+m[8]*p[2]+m[12],y=m[1]*p[0]+m[5]*p[1]+m[9]*p[2]+m[13],w=m[3]*p[0]+m[7]*p[1]+m[11]*p[2]+m[15];
+    if(w<=0.01)return null;return {x:(x/w+1)/2*W,y:(1-y/w)/2*H};
+  }
+  function placeSpots(){
+    var live=inside&&t>=1;
+    SPOTS.forEach(function(s,i){
+      var el=spotEls[i],q=live?project(s.p):null,ok=q&&q.x>18&&q.x<W-18&&q.y>56&&q.y<H-18;
+      el.classList.toggle('shown',!!ok);
+      if(ok){el.style.transform='translate('+q.x.toFixed(1)+'px,'+q.y.toFixed(1)+'px)';}
+    });
+  }
+
+  /* ---------- play ---------- */
+  function pick(i){
+    if(K.state!=='play'||!inside||t<1||found.indexOf(i)>=0)return;
+    found.push(i);spotEls[i].classList.add('found');K.setCount(found.length+'/3');
     if(found.length>=3)K.finish(true);
   }
   function stepIn(){
     if(inside)return;
     if(K.state==='attract'){K.start();return;}
     if(K.state!=='play')return;
-    inside=true;body.classList.add('inside');
-    var from=photo.style.transform;photo.style.transform='none';
-    if(!K.reduce&&photo.animate){anim=photo.animate([{transform:from},{transform:'none'}],{duration:650,easing:'cubic-bezier(0.23,1,0.32,1)'});}
-    spotEls.forEach(function(g){g.setAttribute('tabindex','0');});
-    setTimeout(function(){if(inside&&spotEls[0])spotEls[0].focus({preventScroll:true});},K.reduce?0:400);
+    inside=true;body.classList.add('inside');frame.style.opacity='0';
+    anim={t0:performance.now(),d:K.reduce?160:1150};
+    spotEls.forEach(function(b){b.tabIndex=0;});
   }
   enter.addEventListener('click',stepIn);
   document.getElementById('wall').addEventListener('pointerdown',function(e){if(K.state==='attract'&&e.target!==enter)K.start();});
+  /* look around: drag, or the arrow keys */
+  cv.addEventListener('pointerdown',function(e){if(!inside||t<1)return;drag={x:e.clientX,y:e.clientY,yaw:tyaw,pitch:tpitch};body.classList.add('looking');try{cv.setPointerCapture(e.pointerId);}catch(x){}});
+  cv.addEventListener('pointermove',function(e){if(!drag)return;tyaw=Math.max(-0.75,Math.min(0.75,drag.yaw-(e.clientX-drag.x)/W*1.6));tpitch=Math.max(-0.12,Math.min(0.14,drag.pitch+(e.clientY-drag.y)/H*0.4));});
+  function endDrag(){drag=null;body.classList.remove('looking');}
+  cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
+  window.addEventListener('keydown',function(e){
+    if(!inside||t<1||K.state!=='play')return;
+    if(e.key==='ArrowLeft'){tyaw=Math.max(-0.75,tyaw-0.12);e.preventDefault();}
+    else if(e.key==='ArrowRight'){tyaw=Math.min(0.75,tyaw+0.12);e.preventDefault();}
+  });
   function reset(){
-    inside=false;body.classList.remove('inside');if(anim){anim.cancel();anim=null;}
-    found=[];drawLine();K.setCount('0/3');
-    spotEls.forEach(function(g){g.classList.remove('found');g.setAttribute('tabindex','-1');});
-    place();
+    inside=false;t=0;anim=null;yaw=tyaw=pitch=tpitch=0;drag=null;found=[];
+    body.classList.remove('inside','looking');frame.style.opacity='';K.setCount('0/3');
+    spotEls.forEach(function(b){b.classList.remove('found');b.tabIndex=-1;});
+    resize();
   }
   K.go({
     id:'step',cmd:'Step in!',go:'Tap the photo',winDelay:700,
-    duration:function(m){return m?7:12;},
+    duration:function(m){return m?8:13;},
     winTitle:'Memory shared',winNote:'In Creative Care you keep sight of your own surroundings, then step inside a personal photograph and talk about your past from within it.',
     loseTitle:'Time!',loseNote:'Tap the photo to step inside, then find the three moments it holds.',
-    init:function(){place();},
+    init:function(){resize();},
     reset:reset,
     begin:function(){enter.focus({preventScroll:true});},
-    still:function(){inside=true;body.classList.add('inside');photo.style.transform='none';spotEls[0].classList.add('found');spotEls[1].classList.add('found');found=[0,1];drawLine();}
+    frame:function(dt,s){
+      if(anim){t=Math.min(1,(performance.now()-anim.t0)/anim.d);
+        if(t>=1){anim=null;placeSpots();setTimeout(function(){var f=spotEls.filter(function(b){return b.classList.contains('shown');})[0];if(f&&K.state==='play')f.focus({preventScroll:true});},40);}}
+      var r=K.reduce?1:Math.min(1,dt*7);yaw+=(tyaw-yaw)*r;pitch+=(tpitch-pitch)*r;
+      draw();
+    },
+    /* ?still shows the inside view; ?still&phase=picture or phase=mid show the photo before and while it opens */
+    still:function(){
+      var ph=new URLSearchParams(location.search).get('phase')||'inside';
+      stillTop=Math.max(1,window.innerHeight*0.06);resize();
+      if(ph==='picture'){t=0;draw();return;}
+      inside=true;body.classList.add('inside');frame.style.transition='none';frame.style.opacity='0';yaw=tyaw=-0.04;
+      if(ph==='mid'){t=0.5;draw();return;}
+      t=1;found=[0,1];spotEls[0].classList.add('found');spotEls[1].classList.add('found');draw();}
   });
   if(K.TEST)window.__G={
     get state(){return K.state;},
+    get ready(){return inside&&t>=1;},
     enterPoint:function(){var r=enter.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};},
-    spotPoints:function(){return spotEls.filter(function(g){return !g.classList.contains('found');}).map(function(g){var r=g.querySelector('.core').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};});}
+    spotPoints:function(){return spotEls.filter(function(b){return b.classList.contains('shown')&&!b.classList.contains('found');}).map(function(b){var r=b.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};});}
   };
 })();
 </script>
